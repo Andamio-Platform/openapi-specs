@@ -21,7 +21,7 @@ tags:
     description: Todo management operations
 
 paths:
-  /todos:
+  /todos/new:
     get:
       summary: List all todos
       description: Retrieve a paginated list of all todos
