@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
-  title: Todo API
+  title: Andamio API
   version: 0.0.0
-  description: A simple REST API for managing todos
+  description: <description>
   contact:
     name: API Support
     email: support@example.com
@@ -11,343 +11,819 @@ info:
     identifier: MIT
 
 servers:
-  - url: https://api.example.com/v1
-    description: Production server
-  - url: http://localhost:8080/v1
-    description: Development server
-
-tags:
-  - name: todos
-    description: Todo management operations
+  - url: https://preprod.andamioscan.andamio.space
+    description: Andamioscan
+  - url: https://atlas-api-preprod-507341199760.us-central1.run.app
+    description: Atlas
 
 paths:
-  /todos/new:
-    get:
-      summary: List all todos
-      description: Retrieve a paginated list of all todos
-      operationId: listTodos
-      tags:
-        - todos
-      parameters:
-        - name: limit
-          in: query
-          description: Maximum number of todos to return
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-        - name: offset
-          in: query
-          description: Number of todos to skip
-          required: false
-          schema:
-            type: integer
-            minimum: 0
-            default: 0
-      responses:
-        '200':
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TodoList'
-              example:
-                todos:
-                  - id: "1"
-                    title: "Buy groceries"
-                    description: "Milk, eggs, bread"
-                    completed: false
-                    createdAt: "2024-01-01T10:00:00Z"
-                    updatedAt: "2024-01-01T10:00:00Z"
-                  - id: "2"
-                    title: "Write API documentation"
-                    description: "Complete OpenAPI spec"
-                    completed: true
-                    createdAt: "2024-01-02T14:30:00Z"
-                    updatedAt: "2024-01-03T09:15:00Z"
-                total: 2
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+  /tx/v2/general/mint-access-token:
     post:
-      summary: Create a new todo
-      description: Create a new todo item
-      operationId: createTodo
+      summary: Mint access token
+      description: General API which does not need any requirement. This endpoint allows everyone to submit transaction information for minting a new access token.
       tags:
-        - todos
+        - transactions
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateTodoRequest'
-            example:
-              title: "Read a book"
-              description: "Finish reading Design Patterns"
+              $ref: '#/components/schemas/MintAccessTokenV2TxRequest'
       responses:
-        '201':
-          description: Todo created successfully
+        '200':
+          description: Success
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Todo'
-              example:
-                id: "3"
-                title: "Read a book"
-                description: "Finish reading Design Patterns"
-                completed: false
-                createdAt: "2024-01-04T16:20:00Z"
-                updatedAt: "2024-01-04T16:20:00Z"
+                $ref: '#/components/schemas/UnsignedTxResponse'
         '400':
-          description: Invalid request
+          description: Invalid body
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /todos/{id}:
+  /tx/v2/admin/course/create:
+    post:
+      summary: Create course
+      description: Student API where a course state token is required. This endpoint allows course owner to submit transaction information to initialize a course v2.
+      tags:
+        - transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitCourseV2TxRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnsignedTxResponseInitCourse'
+        '400':
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tx/v2/admin/course/teachers/update:
+    post:
+      summary: Update course teachers
+      description: Student API where a course state token is required. This endpoint allows course owners to submit transaction information to manage course governance.
+      tags:
+        - transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManageCourseGovernanceTxRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnsignedTxResponse'
+        '400':
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tx/v2/teacher/course/modules/manage:
+    post:
+      summary: Manage course modules
+      description: Course Creator API where governance rules of that instance must be followed. This endpoint allows course creators to submit transaction information to mint modules.
+      tags:
+        - transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManageModulesV2TxRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnsignedTxResponse'
+        '400':
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tx/v2/teacher/course/assignments/assess:
+    post:
+      summary: Assess assignments
+      description: Course Creator API where governance rules of that instance must be followed. This endpoint allows course creators to submit transaction information to decide a list of assignments.
+      tags:
+        - transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecideAssignmentV2TxRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnsignedTxResponse'
+        '400':
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tx/v2/student/course/enroll:
+    post:
+      summary: Enroll in course
+      description: Student API where a course state token is required. This endpoint allows users to submit transaction information to mint a course state.
+      tags:
+        - transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MintCourseStateV2TxRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnsignedTxResponse'
+        '400':
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tx/v2/student/course/assignment/update:
+    post:
+      summary: Update assignment
+      description: Student API where a course state token is required. This endpoint allows students to submit transaction information to commit to an assignment.
+      tags:
+        - transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignmentActionV2TxRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnsignedTxResponse'
+        '400':
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tx/v2/student/course/credential/claim:
+    post:
+      summary: Claim credential
+      description: Student API where a course state token is required. This endpoint allows students to submit transaction information to burn a course state and transfer to global state.
+      tags:
+        - transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BurnCourseStateV2TxRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnsignedTxResponse'
+        '400':
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/courses:
     get:
-      summary: Get a todo by ID
-      description: Retrieve a specific todo by its ID
-      operationId: getTodoById
+      summary: Get all courses
+      description: Get all courses
       tags:
-        - todos
-      parameters:
-        - name: id
-          in: path
-          description: Todo ID
-          required: true
-          schema:
-            type: string
+        - courses
       responses:
         '200':
-          description: Successful response
+          description: List of courses
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Todo'
-              example:
-                id: "1"
-                title: "Buy groceries"
-                description: "Milk, eggs, bread"
-                completed: false
-                createdAt: "2024-01-01T10:00:00Z"
-                updatedAt: "2024-01-01T10:00:00Z"
-        '404':
-          description: Todo not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    patch:
-      summary: Update a todo
-      description: Update an existing todo item
-      operationId: updateTodo
-      tags:
-        - todos
-      parameters:
-        - name: id
-          in: path
-          description: Todo ID
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateTodoRequest'
-            example:
-              completed: true
-      responses:
-        '200':
-          description: Todo updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Todo'
-              example:
-                id: "1"
-                title: "Buy groceries"
-                description: "Milk, eggs, bread"
-                completed: true
-                createdAt: "2024-01-01T10:00:00Z"
-                updatedAt: "2024-01-04T17:00:00Z"
+                type: array
+                items:
+                  $ref: '#/components/schemas/Course'
         '400':
-          description: Invalid request
+          description: Bad Request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Todo not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          description: Internal server error
+          description: Internal Server Error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
 
-    delete:
-      summary: Delete a todo
-      description: Delete a specific todo by its ID
-      operationId: deleteTodo
+  /v2/courses/{course_id}:
+    get:
+      summary: Get course by ID
+      description: Get a specific course by course_id
       tags:
-        - todos
+        - courses
       parameters:
-        - name: id
+        - name: course_id
           in: path
-          description: Todo ID
           required: true
+          description: Course ID
           schema:
             type: string
       responses:
-        '204':
-          description: Todo deleted successfully
-        '404':
-          description: Todo not found
+        '200':
+          description: Single course
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/Course'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
-          description: Internal server error
+          description: Internal Server Error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/courses/{course_id}/students:
+    get:
+      summary: Get students by course
+      description: Get students by course_id
+      tags:
+        - courses
+      parameters:
+        - name: course_id
+          in: path
+          required: true
+          description: Course ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of students
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Student'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/courses/{course_id}/students/{alias}:
+    get:
+      summary: Get student by alias
+      description: Get a specific student by alias
+      tags:
+        - courses
+      parameters:
+        - name: course_id
+          in: path
+          required: true
+          description: Course ID
+          schema:
+            type: string
+        - name: alias
+          in: path
+          required: true
+          description: Student alias
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Single student
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/transactions/count:
+    get:
+      summary: Get transaction count
+      description: Get total number of all transactions
+      tags:
+        - transactions
+      responses:
+        '200':
+          description: Transaction count
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionCountResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/user/all:
+    get:
+      summary: Get all users
+      description: Get all users
+      tags:
+        - user
+      responses:
+        '200':
+          description: List of user aliases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/user/global-state/{alias}:
+    get:
+      summary: Get user global state
+      description: Get user global state
+      tags:
+        - user
+      parameters:
+        - name: alias
+          in: path
+          required: true
+          description: User alias
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User global state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGlobalState'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   schemas:
-    Todo:
+    # Request/Response schemas
+    UnsignedTxResponse:
       type: object
       required:
-        - id
-        - title
-        - completed
-        - createdAt
-        - updatedAt
+        - unsignedTxCBOR
       properties:
-        id:
+        unsignedTxCBOR:
           type: string
-          description: Unique identifier for the todo
-          example: "1"
-        title:
-          type: string
-          description: Todo title
-          minLength: 1
-          maxLength: 200
-          example: "Buy groceries"
-        description:
-          type: string
-          description: Detailed description of the todo
-          maxLength: 1000
-          example: "Milk, eggs, bread"
-        completed:
-          type: boolean
-          description: Whether the todo is completed
-          example: false
-        createdAt:
-          type: string
-          format: date-time
-          description: Timestamp when the todo was created
-          example: "2024-01-01T10:00:00Z"
-        updatedAt:
-          type: string
-          format: date-time
-          description: Timestamp when the todo was last updated
-          example: "2024-01-01T10:00:00Z"
 
-    CreateTodoRequest:
+    UnsignedTxResponseInitCourse:
       type: object
       required:
-        - title
+        - unsignedTxCBOR
+        - courseId
       properties:
-        title:
+        unsignedTxCBOR:
           type: string
-          description: Todo title
-          minLength: 1
-          maxLength: 200
-          example: "Buy groceries"
-        description:
+        courseId:
           type: string
-          description: Detailed description of the todo
-          maxLength: 1000
-          example: "Milk, eggs, bread"
+          description: Course ID (minting policy hash)
+          pattern: '^[a-fA-F0-9]{56}$'
 
-    UpdateTodoRequest:
+    ErrorResponse:
       type: object
       properties:
-        title:
+        error:
           type: string
-          description: Todo title
-          minLength: 1
-          maxLength: 200
-          example: "Buy groceries"
-        description:
-          type: string
-          description: Detailed description of the todo
-          maxLength: 1000
-          example: "Milk, eggs, bread"
-        completed:
-          type: boolean
-          description: Whether the todo is completed
-          example: true
 
-    TodoList:
+    TransactionCountResponse:
       type: object
-      required:
-        - todos
-        - total
       properties:
-        todos:
-          type: array
-          items:
-            $ref: '#/components/schemas/Todo'
+        count:
+          $ref: '#/components/schemas/TransactionCounts'
+
+    TransactionCounts:
+      type: object
+      properties:
+        assess_assignment:
+          type: integer
+        claim_credential:
+          type: integer
+        create_course:
+          type: integer
+        enroll_course:
+          type: integer
+        manage_modules:
+          type: integer
+        mint_access_token:
+          type: integer
+        submit_assignment:
+          type: integer
         total:
           type: integer
-          description: Total number of todos
-          example: 42
+        unknown:
+          type: integer
+        update_assignment:
+          type: integer
+        update_teachers:
+          type: integer
 
-    Error:
+    # Basic types
+    GYAddressBech32:
+      type: string
+      description: An address, serialised as Bech32
+      example: addr_test1qrsuhwqdhz0zjgnf46unas27h93amfghddnff8lpc2n28rgmjv8f77ka0zshfgssqr5cnl64zdnde5f8q2xt923e7ctqu49mg5
+      format: bech32
+
+    Alias:
+      type: string
+      description: Plain text alias (not hex encoded). Only alphanumeric characters and underscores allowed
+      example: JohnDoe
+      maxLength: 31
+      minLength: 1
+      pattern: '^[a-zA-Z0-9_]+$'
+
+    GYMintingPolicyId:
+      type: string
+      description: Hash of a minting policy script
+      example: ff80aaaf03a273b8f5c558168dc0e2377eea810badbae6eceefc14ef
+      pattern: '^[a-fA-F0-9]{56}$'
+      minLength: 56
+      maxLength: 56
+
+    SltHash:
+      type: string
+      description: Hex encoded hash (exactly 64 characters)
+      example: c8bc55db03d6ead9311272b7c73637e6999f8306574321f009d7053eaa98cf7b
+      pattern: '^[a-fA-F0-9]{64}$'
+      minLength: 64
+      maxLength: 64
+
+    WalletData:
       type: object
       required:
-        - code
-        - message
+        - usedAddresses
+        - changeAddress
       properties:
-        code:
+        usedAddresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/GYAddressBech32'
+        changeAddress:
+          $ref: '#/components/schemas/GYAddressBech32'
+
+    # Transaction request schemas
+    MintAccessTokenV2TxRequest:
+      type: object
+      required:
+        - walletData
+        - alias
+      properties:
+        walletData:
+          $ref: '#/components/schemas/GYAddressBech32'
+        alias:
+          $ref: '#/components/schemas/Alias'
+
+    InitCourseV2TxRequest:
+      type: object
+      required:
+        - alias
+        - teachers
+      properties:
+        walletData:
+          $ref: '#/components/schemas/WalletData'
+        alias:
+          $ref: '#/components/schemas/Alias'
+        teachers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alias'
+
+    ManageCourseGovernanceTxRequest:
+      type: object
+      required:
+        - alias
+        - courseId
+        - teachersToAdd
+        - teachersToRemove
+      properties:
+        walletData:
+          $ref: '#/components/schemas/WalletData'
+        alias:
+          $ref: '#/components/schemas/Alias'
+        courseId:
+          $ref: '#/components/schemas/GYMintingPolicyId'
+        teachersToAdd:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alias'
+        teachersToRemove:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alias'
+
+    ManageModulesV2TxRequest:
+      type: object
+      required:
+        - alias
+        - courseId
+        - modulesToMint
+        - modulesToUpdate
+        - modulesToBurn
+      properties:
+        walletData:
+          $ref: '#/components/schemas/WalletData'
+        alias:
+          $ref: '#/components/schemas/Alias'
+        courseId:
+          $ref: '#/components/schemas/GYMintingPolicyId'
+        modulesToMint:
+          type: array
+          items:
+            $ref: '#/components/schemas/MintModuleV2'
+        modulesToUpdate:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpdateModuleV2'
+        modulesToBurn:
+          type: array
+          items:
+            $ref: '#/components/schemas/SltHash'
+
+    MintModuleV2:
+      type: object
+      required:
+        - slts
+        - allowedStudents_V2
+        - prerequisiteAssignments_V2
+      properties:
+        slts:
+          type: array
+          items:
+            type: string
+        allowedStudents_V2:
+          type: array
+          items:
+            $ref: '#/components/schemas/GYMintingPolicyId'
+        prerequisiteAssignments_V2:
+          type: array
+          items:
+            $ref: '#/components/schemas/SltHash'
+
+    UpdateModuleV2:
+      type: object
+      required:
+        - sltHash
+        - allowedStudents_V2
+        - prerequisiteAssignments_V2
+      properties:
+        sltHash:
+          $ref: '#/components/schemas/SltHash'
+        allowedStudents_V2:
+          type: array
+          items:
+            $ref: '#/components/schemas/GYMintingPolicyId'
+        prerequisiteAssignments_V2:
+          type: array
+          items:
+            $ref: '#/components/schemas/SltHash'
+
+    DecideAssignmentV2TxRequest:
+      type: object
+      required:
+        - alias
+        - courseId
+        - assignmentDecisions
+      properties:
+        walletData:
+          $ref: '#/components/schemas/WalletData'
+        alias:
+          $ref: '#/components/schemas/Alias'
+        courseId:
+          $ref: '#/components/schemas/GYMintingPolicyId'
+        assignmentDecisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignmentOutcome'
+
+    AssignmentOutcome:
+      type: object
+      description: Course assignment outcome - accept or refuse with student alias
+      required:
+        - outcome
+        - alias
+      properties:
+        outcome:
           type: string
-          description: Error code
-          example: "INTERNAL_ERROR"
-        message:
+          enum:
+            - accept
+            - refuse
+        alias:
+          $ref: '#/components/schemas/Alias'
+      example:
+        alias: JohnDoe
+        outcome: accept
+
+    MintCourseStateV2TxRequest:
+      type: object
+      required:
+        - alias
+        - courseId
+      properties:
+        walletData:
+          $ref: '#/components/schemas/WalletData'
+        alias:
+          $ref: '#/components/schemas/Alias'
+        courseId:
+          $ref: '#/components/schemas/GYMintingPolicyId'
+        commitData:
+          $ref: '#/components/schemas/CommitData'
+
+    CommitData:
+      type: object
+      required:
+        - sltHash
+        - assignmentInfo
+      properties:
+        sltHash:
+          $ref: '#/components/schemas/SltHash'
+        assignmentInfo:
           type: string
-          description: Human-readable error message
-          example: "An unexpected error occurred"
-        details:
-          type: object
-          description: Additional error details
-          additionalProperties: true
+
+    AssignmentActionV2TxRequest:
+      type: object
+      required:
+        - alias
+        - courseId
+        - assignmentInfo
+      properties:
+        walletData:
+          $ref: '#/components/schemas/WalletData'
+        alias:
+          $ref: '#/components/schemas/Alias'
+        courseId:
+          $ref: '#/components/schemas/GYMintingPolicyId'
+        assignmentInfo:
+          type: string
+        maybeNewSltHash:
+          $ref: '#/components/schemas/SltHash'
+
+    BurnCourseStateV2TxRequest:
+      type: object
+      required:
+        - alias
+        - courseId
+      properties:
+        walletData:
+          $ref: '#/components/schemas/WalletData'
+        alias:
+          $ref: '#/components/schemas/Alias'
+        courseId:
+          $ref: '#/components/schemas/GYMintingPolicyId'
+
+    Course:
+      type: object
+      properties:
+        course_address:
+          type: string
+        course_id:
+          type: string
+        course_state_policy_id:
+          type: string
+        modules:
+          type: array
+          items:
+            $ref: '#/components/schemas/Module'
+        teachers:
+          type: array
+          items:
+            type: string
+
+    Module:
+      type: object
+      properties:
+        assignment_id:
+          type: string
+        created_by:
+          type: string
+        prerequisites:
+          type: array
+          items:
+            type: string
+        slts:
+          type: array
+          items:
+            type: string
+
+    Student:
+      type: object
+      properties:
+        alias:
+          type: string
+        completed:
+          type: array
+          items:
+            type: string
+        course_id:
+          type: string
+        current:
+          type: string
+
+    UserCourse:
+      type: object
+      properties:
+        course_id:
+          type: string
+        credential_id:
+          type: string
+        credentials:
+          type: array
+          items:
+            type: string
+        is_enrolled:
+          type: boolean
+
+    UserGlobalState:
+      type: object
+      properties:
+        alias:
+          type: string
+        courses:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserCourse'
