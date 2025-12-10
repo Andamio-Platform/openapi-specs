@@ -1,0 +1,158 @@
+name: Publish Pre-Release on Spec Change
+
+# Trigger workflow on push to main branch when openapi.yaml changes
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'openapi.yaml'
+  # Allow manual workflow dispatch for testing
+  workflow_dispatch:
+
+# Required permissions for creating tags and releases
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  validate-and-release:
+    name: Validate OpenAPI Spec and Create Pre-Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Checkout the repository with full git history for tag analysis
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history to access previous tags
+      
+      # Step 2: Validate the OpenAPI specification using Docker
+      - name: Validate OpenAPI Specification
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/local \
+            openapitools/openapi-generator-cli:latest \
+            validate -i /local/openapi.yaml
+      
+      # Step 3: Fetch all existing tags from the remote repository
+      - name: Fetch existing tags
+        run: git fetch --tags
+      
+      # Step 4: Calculate the next pre-release version based on existing tags
+      # Logic: Find the latest tag, bump patch version, append -beta.0
+      - name: Calculate next pre-release version
+        id: version
+        run: |
+          # Get the latest tag (sorted by version)
+          LATEST_TAG=$(git tag -l 'v*' | sort -V | tail -n 1)
+          
+          if [ -z "$LATEST_TAG" ]; then
+            # No existing tags, start with v0.1.0-beta.0
+            NEW_VERSION="v0.1.0-beta.0"
+          else
+            echo "Latest tag: $LATEST_TAG"
+            
+            # Remove 'v' prefix and any pre-release suffix
+            VERSION=${LATEST_TAG#v}
+            BASE_VERSION=$(echo $VERSION | cut -d'-' -f1)
+            
+            # Split version into major.minor.patch
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE_VERSION"
+            
+            # Bump patch version
+            PATCH=$((PATCH + 1))
+            
+            # Create new pre-release version
+            NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}-beta.0"
+          fi
+          
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+      
+      # Step 5: Create and push the new git tag
+      - name: Create and push tag
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a $NEW_VERSION -m "Pre-release $NEW_VERSION - OpenAPI spec update"
+          git push origin $NEW_VERSION
+      
+      # Step 6: Generate release notes and create GitHub pre-release
+      - name: Create GitHub Pre-Release
+        uses: actions/github-script@v7
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.version }}
+        with:
+          script: |
+            const { NEW_VERSION } = process.env;
+            
+            // Get commits since last tag for release notes
+            let previousTag = '';
+            try {
+              const tags = await github.rest.repos.listTags({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100
+              });
+              
+              // Find the second-most recent tag (first is the one we just created)
+              const sortedTags = tags.data
+                .map(t => t.name)
+                .filter(t => t !== NEW_VERSION)
+                .sort((a, b) => {
+                  const aNum = a.replace(/[^\d.]/g, '');
+                  const bNum = b.replace(/[^\d.]/g, '');
+                  return bNum.localeCompare(aNum, undefined, { numeric: true });
+                });
+              
+              previousTag = sortedTags[0] || '';
+            } catch (error) {
+              console.log('No previous tags found');
+            }
+            
+            // Generate release notes
+            let releaseNotes = '';
+            if (previousTag) {
+              try {
+                const comparison = await github.rest.repos.compareCommits({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  base: previousTag,
+                  head: NEW_VERSION
+                });
+                
+                const commits = comparison.data.commits
+                  .map(commit => `- ${commit.commit.message.split('\n')[0]} (${commit.sha.substring(0, 7)})`)
+                  .join('\n');
+                
+                releaseNotes = `## Changes since ${previousTag}\n\n${commits}`;
+              } catch (error) {
+                console.log('Could not generate comparison:', error.message);
+              }
+            }
+            
+            if (!releaseNotes) {
+              releaseNotes = `## OpenAPI Specification Update\n\nThis pre-release contains updates to the OpenAPI specification.\n\nView the spec: [openapi.yaml](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/${NEW_VERSION}/openapi.yaml)`;
+            }
+            
+            // Add footer
+            releaseNotes += `\n\n---\n\n### Generated SDKs\n\nTo generate client SDKs from this spec:\n\n\`\`\`bash\nmake all\n\`\`\`\n\nThis will generate TypeScript, Go, Rust, and Python SDKs in the \`./sdks/\` directory.`;
+            
+            // Create the pre-release
+            const release = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: NEW_VERSION,
+              name: `${NEW_VERSION} - Pre-Release`,
+              body: releaseNotes,
+              prerelease: true,
+              draft: false
+            });
+            
+            console.log(`Created pre-release: ${release.data.html_url}`);
+            core.summary.addHeading(`Pre-Release ${NEW_VERSION} Created`);
+            core.summary.addLink('View Release', release.data.html_url);
+            await core.summary.write();
