@@ -1,1 +1,7 @@
+# Generated SDKs
 sdks/
+
+# TypeScript types package build outputs
+packages/andamio-types/dist/
+packages/andamio-types/src/index.ts
+packages/andamio-types/node_modules/

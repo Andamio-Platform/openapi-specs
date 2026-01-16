@@ -4,6 +4,8 @@
 # Variables
 OPENAPI_FILE := openapi.yaml
 SDK_DIR := sdks
+PACKAGES_DIR := packages
+TYPES_PKG := $(PACKAGES_DIR)/andamio-types
 DOCKER_IMAGE := openapitools/openapi-generator-cli:latest
 DOCKER_RUN := docker run --rm -v ${PWD}:/local $(DOCKER_IMAGE)
 
@@ -11,21 +13,26 @@ DOCKER_RUN := docker run --rm -v ${PWD}:/local $(DOCKER_IMAGE)
 GREEN := \033[0;32m
 NC := \033[0m # No Color
 
-.PHONY: all typescript go rust python clean validate help
+.PHONY: all typescript go rust python clean validate help types types-build types-publish
 
 # Default target - shows help
 help:
 	@echo "$(GREEN)OpenAPI SDK Generator$(NC)"
 	@echo ""
 	@echo "Available targets:"
-	@echo "  make all        - Generate all SDKs (TypeScript, Go, Rust, Python)"
-	@echo "  make typescript - Generate TypeScript (typescript-fetch) SDK"
-	@echo "  make go         - Generate Go SDK"
-	@echo "  make rust       - Generate Rust SDK"
-	@echo "  make python     - Generate Python SDK"
-	@echo "  make validate   - Validate the OpenAPI spec"
-	@echo "  make clean      - Remove all generated SDKs"
-	@echo "  make help       - Show this help message"
+	@echo "  make all           - Generate all SDKs (TypeScript, Go, Rust, Python)"
+	@echo "  make typescript    - Generate TypeScript (typescript-fetch) SDK"
+	@echo "  make go            - Generate Go SDK"
+	@echo "  make rust          - Generate Rust SDK"
+	@echo "  make python        - Generate Python SDK"
+	@echo "  make validate      - Validate the OpenAPI spec"
+	@echo "  make clean         - Remove all generated SDKs"
+	@echo "  make help          - Show this help message"
+	@echo ""
+	@echo "$(GREEN)TypeScript Types Package$(NC)"
+	@echo "  make types         - Generate TypeScript types (requires Node.js)"
+	@echo "  make types-build   - Generate and build the types package"
+	@echo "  make types-publish - Build and publish to npm (requires npm login)"
 
 # Generate all SDKs
 all: typescript go rust python
@@ -89,4 +96,30 @@ python:
 clean:
 	@echo "$(GREEN)Cleaning generated SDKs...$(NC)"
 	@rm -rf $(SDK_DIR)
+	@rm -rf $(TYPES_PKG)/dist $(TYPES_PKG)/src/index.ts
 	@echo "$(GREEN)✓ Cleaned$(NC)"
+
+# ============================================================================
+# TypeScript Types Package (@andamio/types)
+# Generates pure TypeScript types from OpenAPI spec using openapi-typescript
+# ============================================================================
+
+# Generate TypeScript types only (no build)
+# Requires: Node.js and npm
+types:
+	@echo "$(GREEN)Generating TypeScript types...$(NC)"
+	@cd $(TYPES_PKG) && npm install && npm run generate
+	@echo "$(GREEN)✓ Types generated at $(TYPES_PKG)/src/index.ts$(NC)"
+
+# Generate and build the types package
+types-build: types
+	@echo "$(GREEN)Building types package...$(NC)"
+	@cd $(TYPES_PKG) && npm run build
+	@echo "$(GREEN)✓ Package built at $(TYPES_PKG)/dist/$(NC)"
+
+# Build and publish to npm
+# Requires: npm login to @andamio scope
+types-publish: types-build
+	@echo "$(GREEN)Publishing @andamio/types to npm...$(NC)"
+	@cd $(TYPES_PKG) && npm publish --access public
+	@echo "$(GREEN)✓ Published to npm$(NC)"

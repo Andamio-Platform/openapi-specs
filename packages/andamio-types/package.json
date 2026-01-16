@@ -1,0 +1,58 @@
+{
+  "name": "@andamio/types",
+  "version": "0.0.1",
+  "description": "TypeScript type definitions for the Andamio API",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "generate": "openapi-typescript ../../openapi.yaml -o ./src/index.ts",
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "prepublishOnly": "npm run generate && npm run build",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "andamio",
+    "typescript",
+    "types",
+    "openapi",
+    "cardano"
+  ],
+  "author": "Andamio",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andamioorg/openapi-specs.git",
+    "directory": "packages/andamio-types"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "peerDependencies": {
+    "typescript": ">=4.7"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  }
+}
