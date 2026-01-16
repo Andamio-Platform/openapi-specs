@@ -1,786 +1,2479 @@
-openapi: 3.1.0
+openapi: 3.0.0
 info:
-  title: Andamio API
-  version: 0.0.0
-  description: <description>
+  description: This is the central API Gateway for the Andamio platform, providing
+    a unified interface for various services including Atlas TX Builder and Node
+    Backend API. It handles authentication, authorization, rate limiting, and
+    routes requests to the appropriate backend services.
+  title: Andamio API Gateway
+  termsOfService: https://andamio.io/terms
   contact:
-    name: API Support
-    email: support@example.com
+    name: Andamio API Support
+    url: https://andamio.io/support
+    email: support@andamio.io
   license:
-    name: MIT
-    identifier: MIT
-
-servers:
-  - url: https://preprod.andamioscan.andamio.space
-    description: Andamioscan
-  - url: https://atlas-api-preprod-507341199760.us-central1.run.app
-    description: Atlas
-
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  version: v1.0.0
 paths:
-  /tx/v2/general/mint-access-token:
+  /admin/set-user-role:
     post:
-      summary: Mint access token
-      description: General API which does not need any requirement. This endpoint allows everyone to submit transaction information for minting a new access token.
+      security:
+        - BearerAuth: []
+      description: This endpoint allows an administrator to set a user's subscription tier.
       tags:
-        - transactions
+        - Admin
+        - Setting
+      summary: Set User Role
+      operationId: set-user-role
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MintAccessTokenV2TxRequest'
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnsignedTxResponse'
-        '400':
-          description: Invalid body
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /tx/v2/admin/course/create:
-    post:
-      summary: Create course
-      description: Student API where a course state token is required. This endpoint allows course owner to submit transaction information to initialize a course v2.
-      tags:
-        - transactions
-      requestBody:
+              $ref: "#/components/schemas/admin_viewmodels.SetUserRoleRequest"
+        description: Set User Role Request Body - Contains the user ID and either the
+          new tier ID or tier name (at least one must be provided).
         required: true
+      responses:
+        "200":
+          description: Successfully updated the user's role.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/admin_viewmodels.SetUserRoleResponse"
+        "400":
+          description: Bad Request - The request body is malformed, missing required
+            fields, or the provided tier ID/name is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "401":
+          description: Unauthorized - Authentication failed or user is not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnauthorizedErrorResponse"
+        "403":
+          description: Forbidden - The user IP is blacklisted or user does not have admin
+            privileges.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.ForbiddenErrorResponse"
+        "404":
+          description: Not Found - The specified user was not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.NotFoundErrorResponse"
+        "422":
+          description: Unprocessable Entity - Validation failed. The request data is
+            syntactically correct but semantically invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnprocessableEntityErrorResponse"
+        "429":
+          description: Too Many Requests - The user has exceeded the rate limit for this
+            endpoint. Please wait and try again later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.TooManyRequestsErrorResponse"
+        "500":
+          description: Internal Server Error - An unexpected error occurred on the server.
+            Please try again later or contact support.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+      x-access-level: internal
+      x-metadata-status: alpha
+      x-operation-id: setUserRoleV1
+      x-rate-limit-tier: admin
+  /admin/usage/any-user-daily-api-usage:
+    post:
+      security:
+        - BearerAuth: []
+      description: This endpoint retrieves aggregated daily API usage data for
+        administrators, allowing filtering by date range and a list of user
+        information (alias and optional API key names).
+      tags:
+        - Admin
+        - API Usage
+      summary: Get Any User Daily API Usage
+      operationId: any-user-daily-api-usage
+      requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/InitCourseV2TxRequest'
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnsignedTxResponseInitCourse'
-        '400':
-          description: Invalid body
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /tx/v2/admin/course/teachers/update:
-    post:
-      summary: Update course teachers
-      description: Student API where a course state token is required. This endpoint allows course owners to submit transaction information to manage course governance.
-      tags:
-        - transactions
-      requestBody:
+              $ref: "#/components/schemas/api_usage_viewmodels.AnyUserDailyApiUsageRequest"
+        description: Any User Daily Usage Request Body - Contains filters for date range
+          and user information.
         required: true
+      responses:
+        "200":
+          description: Successfully retrieved daily API usage summaries. The response
+            contains a list of daily summaries aggregated by user, and then by
+            API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/api_usage_viewmodels.AnyUserDailyApiUsageResponse"
+        "400":
+          description: Bad Request - The request body is malformed, missing required
+            fields, or contains invalid date formats.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "401":
+          description: Unauthorized - Authentication required. Admin privileges needed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnauthorizedErrorResponse"
+        "403":
+          description: Forbidden - Insufficient permissions or tier access.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.ForbiddenErrorResponse"
+        "422":
+          description: Unprocessable Entity - Validation failed. The request data is
+            syntactically correct but semantically invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnprocessableEntityErrorResponse"
+        "429":
+          description: Too Many Requests - The user has exceeded the rate limit for this
+            endpoint. Please wait and try again later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.TooManyRequestsErrorResponse"
+        "500":
+          description: Internal Server Error - An unexpected error occurred on the server.
+            This could be due to issues with the backend services or database.
+            Please try again later or contact support.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+      x-access-level: admin
+      x-metadata-status: alpha
+      x-operation-id: anyUserDailyUsageHandlerV1
+      x-rate-limit-tier: none
+  /admin/usage/user-api-usage:
+    post:
+      security:
+        - BearerAuth: []
+      description: This endpoint retrieves API usage metrics for a specified user,
+        allowing filtering by date range and an optional list of API key names.
+        This endpoint is only accessible to administrators.
+      tags:
+        - Admin
+        - API Usage
+      summary: Get User API Usage Metrics (Admin)
+      operationId: user-api-usage-metrics
+      requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ManageCourseGovernanceTxRequest'
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnsignedTxResponse'
-        '400':
-          description: Invalid body
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /tx/v2/teacher/course/modules/manage:
-    post:
-      summary: Manage course modules
-      description: Course Creator API where governance rules of that instance must be followed. This endpoint allows course creators to submit transaction information to mint modules.
-      tags:
-        - transactions
-      requestBody:
+              $ref: "#/components/schemas/api_usage_viewmodels.UserAPIUsageRequest"
+        description: API Usage Metric Request Body - Contains user alias, filters for
+          date range, and optional list of API key names.
         required: true
+      responses:
+        "200":
+          description: Successfully retrieved raw API usage metrics. The response contains
+            a list of raw metrics grouped by API key for the specified user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/api_usage_viewmodels.UserAPIUsageResponse"
+        "400":
+          description: Bad Request - The request body is malformed, missing required
+            fields, or contains invalid date formats.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "401":
+          description: Unauthorized - Authentication required. Admin user ID not found in
+            authentication context.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnauthorizedErrorResponse"
+        "403":
+          description: Forbidden - Insufficient permissions. Only administrators can
+            access this endpoint.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.ForbiddenErrorResponse"
+        "422":
+          description: Unprocessable Entity - Validation failed. The request data is
+            syntactically correct but semantically invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnprocessableEntityErrorResponse"
+        "429":
+          description: Too Many Requests - The administrator has exceeded the rate limit
+            for this endpoint. Please wait and try again later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.TooManyRequestsErrorResponse"
+        "500":
+          description: Internal Server Error - An unexpected error occurred on the server.
+            This could be due to issues with the backend services or database.
+            Please try again later or contact support.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+      x-access-level: admin
+      x-metadata-status: alpha
+      x-operation-id: userAPIUsageMetricHandlerV1
+      x-rate-limit-tier: none
+  /api/v2/course/student/course-status:
+    post:
+      description: Returns student's course progress with both off-chain and on-chain
+        progress data
+      tags:
+        - Courses (Merged)
+      summary: Get student course status
+      requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ManageModulesV2TxRequest'
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnsignedTxResponse'
-        '400':
-          description: Invalid body
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /tx/v2/teacher/course/assignments/assess:
-    post:
-      summary: Assess assignments
-      description: Course Creator API where governance rules of that instance must be followed. This endpoint allows course creators to submit transaction information to decide a list of assignments.
-      tags:
-        - transactions
-      requestBody:
+              $ref: "#/components/schemas/merged_handlers.StudentCourseStatusRequest"
+        description: Student course status request
         required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.MergedCourseStatusResponse"
+        "206":
+          description: Partial content (one backend unavailable)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.MergedCourseStatusResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.ErrorResponse"
+        "502":
+          description: Both backends unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.ErrorResponse"
+  "/api/v2/course/user/course/get/{policy_id}":
+    get:
+      description: Returns detailed course info with both off-chain (DB) and on-chain
+        (Andamioscan) data
+      tags:
+        - Courses (Merged)
+      summary: Get course detail with on-chain state
+      parameters:
+        - description: Course Policy ID
+          name: policy_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.MergedCourseDetailResponse"
+        "206":
+          description: Partial content (one backend unavailable)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.MergedCourseDetailResponse"
+        "404":
+          description: Course not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.ErrorResponse"
+        "502":
+          description: Both backends unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.ErrorResponse"
+  /api/v2/course/user/courses/list:
+    get:
+      description: Returns all published courses with both off-chain (DB) and on-chain
+        (Andamioscan) data
+      tags:
+        - Courses (Merged)
+      summary: List courses with on-chain state
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.MergedCoursesResponse"
+        "206":
+          description: Partial content (one backend unavailable)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.MergedCoursesResponse"
+        "502":
+          description: Both backends unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.ErrorResponse"
+  "/api/v2/project/contributor/status/{project_id}/{alias}":
+    get:
+      description: Returns the contributor's status and progress in a specific project
+      tags:
+        - Projects (Merged)
+      summary: Get contributor status in project
+      parameters:
+        - description: Project ID
+          name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - description: Contributor Alias
+          name: alias
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.ContributorStatusResponse"
+        "404":
+          description: Contributor or project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.ErrorResponse"
+        "502":
+          description: Backend unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.ErrorResponse"
+  "/api/v2/project/user/project/{project_id}":
+    get:
+      description: Returns detailed project info with both off-chain (DB) and on-chain
+        (Andamioscan) data
+      tags:
+        - Projects (Merged)
+      summary: Get project detail with on-chain state
+      parameters:
+        - description: Project ID
+          name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.MergedProjectDetailResponse"
+        "206":
+          description: Partial content (one backend unavailable)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.MergedProjectDetailResponse"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.ErrorResponse"
+        "502":
+          description: Both backends unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.ErrorResponse"
+  /api/v2/project/user/projects/list:
+    get:
+      description: Returns all published projects with both off-chain (DB) and
+        on-chain (Andamioscan) data
+      tags:
+        - Projects (Merged)
+      summary: List projects with on-chain state
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.MergedProjectsResponse"
+        "206":
+          description: Partial content (one backend unavailable)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.MergedProjectsResponse"
+        "502":
+          description: Both backends unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/merged_handlers.ErrorResponse"
+  /apikey/delete:
+    post:
+      security:
+        - BearerAuth: []
+      description: This endpoint allows an authenticated user to revoke or delete a
+        specific API key associated with their account. This action is
+        irreversible and enhances security by invalidating compromised keys.
+      tags:
+        - API Key
+      summary: Revoke/Delete an API Key
+      operationId: delete-api-key-auth
+      requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DecideAssignmentV2TxRequest'
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnsignedTxResponse'
-        '400':
-          description: Invalid body
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /tx/v2/student/course/enroll:
-    post:
-      summary: Enroll in course
-      description: Student API where a course state token is required. This endpoint allows users to submit transaction information to mint a course state.
-      tags:
-        - transactions
-      requestBody:
+              $ref: "#/components/schemas/api_key_viewmodels.DeleteAPIKeyRequest"
+        description: Delete API Key Request Body - Contains the name of the API key to
+          be deleted.
         required: true
+      responses:
+        "200":
+          description: Successfully deleted the API key. The response confirms the deletion.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/api_key_viewmodels.DeleteAPIKeyResponse"
+        "400":
+          description: Bad Request - The request body is malformed or missing required
+            fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "401":
+          description: Unauthorized - Authentication required. User ID not found in
+            authentication context.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnauthorizedErrorResponse"
+        "403":
+          description: Forbidden - Insufficient permissions or tier access. The API key
+            does not belong to the user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.ForbiddenErrorResponse"
+        "422":
+          description: Unprocessable Entity - Validation failed. The request data is
+            syntactically correct but semantically invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnprocessableEntityErrorResponse"
+        "429":
+          description: Too Many Requests - The user has exceeded the rate limit for this
+            endpoint. Please wait and try again later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.TooManyRequestsErrorResponse"
+        "500":
+          description: Internal Server Error - An unexpected error occurred on the server.
+            This could be due to issues with the backend services or database.
+            Please try again later or contact support.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+      x-access-level: internal
+      x-metadata-status: alpha
+      x-operation-id: deleteApiKeyV1
+      x-rate-limit-tier: none
+  /apikey/request:
+    post:
+      security:
+        - BearerAuth: []
+      description: This endpoint generates and returns a new API key for the
+        authenticated user. The new key can be used for subsequent API requests.
+      tags:
+        - API Key
+      summary: Request a New API Key
+      operationId: request-api-key-auth
+      requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MintCourseStateV2TxRequest'
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnsignedTxResponse'
-        '400':
-          description: Invalid body
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /tx/v2/student/course/assignment/update:
-    post:
-      summary: Update assignment
-      description: Student API where a course state token is required. This endpoint allows students to submit transaction information to commit to an assignment.
-      tags:
-        - transactions
-      requestBody:
+              $ref: "#/components/schemas/api_key_viewmodels.APIKeyRequest"
+        description: API Key Request Body - Contains details for the new API key, such
+          as its name and expiration duration.
         required: true
+      responses:
+        "200":
+          description: Successfully generated a new API key. The response contains the new
+            API key, its creation and expiration timestamps, and its active
+            status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/api_key_viewmodels.APIKeyResponse"
+        "400":
+          description: Bad Request - The request body is malformed or missing required
+            fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "401":
+          description: Unauthorized - Authentication required. User ID not found in
+            authentication context.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnauthorizedErrorResponse"
+        "403":
+          description: Forbidden - Insufficient permissions or tier access. User does not
+            have required role.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.ForbiddenErrorResponse"
+        "422":
+          description: Unprocessable Entity - Validation failed. The request data is
+            syntactically correct but semantically invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnprocessableEntityErrorResponse"
+        "429":
+          description: Too Many Requests - The user has exceeded the rate limit for this
+            endpoint or reached the maximum API key limit. Please wait and try
+            again later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.TooManyRequestsErrorResponse"
+        "500":
+          description: Internal Server Error - An unexpected error occurred on the server.
+            This could be due to issues with the backend services or database.
+            Please try again later or contact support.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+      x-access-level: internal
+      x-metadata-status: alpha
+      x-operation-id: requestApiKeyV1
+      x-rate-limit-tier: none
+  /apikey/rotate:
+    post:
+      security:
+        - BearerAuth: []
+      description: This endpoint validates the existence of the provided API key name.
+        If the key name exists and belongs to the authenticated user, it checks
+        its expiration status. If the API key is found to be expired or within 1
+        day of expiration, its validity is extended by the specified duration.
+      tags:
+        - API Key
+      summary: Rotate API Key
+      operationId: rotate-api-key-auth
+      requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AssignmentActionV2TxRequest'
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnsignedTxResponse'
-        '400':
-          description: Invalid body
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /tx/v2/student/course/credential/claim:
-    post:
-      summary: Claim credential
-      description: Student API where a course state token is required. This endpoint allows students to submit transaction information to burn a course state and transfer to global state.
-      tags:
-        - transactions
-      requestBody:
+              $ref: "#/components/schemas/api_key_viewmodels.RotateAPIKeyRequest"
+        description: API Key Rotation Request (using API key name and optional
+          expiration in days)
         required: true
+      responses:
+        "200":
+          description: Successfully extended the API key's expiration. The response
+            contains a confirmation message.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/api_key_viewmodels.RotateAPIKeyResponse"
+        "400":
+          description: Bad Request - The request body is malformed or missing required
+            fields or 'expires_in_days' is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "401":
+          description: Unauthorized - Authentication required. User ID not found in
+            authentication context.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnauthorizedErrorResponse"
+        "403":
+          description: Forbidden - Insufficient permissions or tier access. The API key
+            name does not belong to the user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.ForbiddenErrorResponse"
+        "404":
+          description: Not Found - The provided API key name does not exist or does not
+            belong to the authenticated user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.NotFoundErrorResponse"
+        "409":
+          description: Conflict - The API key is not yet eligible for rotation or does not
+            have an expiration date.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.ConflictErrorResponse"
+        "422":
+          description: Unprocessable Entity - Validation failed. The request data is
+            syntactically correct but semantically invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnprocessableEntityErrorResponse"
+        "429":
+          description: Too Many Requests - The user has exceeded the rate limit for this
+            endpoint. Please wait and try again later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.TooManyRequestsErrorResponse"
+        "500":
+          description: Internal Server Error - An unexpected error occurred on the server.
+            This could be due to issues with the backend services or database.
+            Please try again later or contact support.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+      x-access-level: internal
+      x-metadata-status: alpha
+      x-operation-id: rotateApiKeyV1
+      x-rate-limit-tier: none
+  /auth/login:
+    post:
+      description: This endpoint authenticates a user using their alias and wallet
+        address. Upon successful authentication, a new JWT (JSON Web Token) is
+        returned for subsequent API requests.
+      tags:
+        - Authentication
+      summary: User Login
+      operationId: user-login-auth
+      requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BurnCourseStateV2TxRequest'
+              $ref: "#/components/schemas/auth_viewmodels.LoginRequest"
+        description: Login Request Body - Contains the user's alias and wallet address
+          for authentication.
+        required: true
       responses:
-        '200':
-          description: Success
+        "200":
+          description: Successfully authenticated and generated a JWT. The response
+            contains the JWT and user ID.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnsignedTxResponse'
-        '400':
-          description: Invalid body
+                $ref: "#/components/schemas/auth_viewmodels.LoginResponse"
+        "400":
+          description: Bad Request - The request body is malformed or missing required
+            fields.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "401":
+          description: Unauthorized - Authentication failed due to incorrect alias or
+            wallet address.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnauthorizedErrorResponse"
+        "403":
+          description: Forbidden - The user IP is blacklisted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.ForbiddenErrorResponse"
+        "422":
+          description: Unprocessable Entity - Validation failed. The request data is
+            syntactically correct but semantically invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnprocessableEntityErrorResponse"
+        "429":
+          description: Too Many Requests - The user has exceeded the rate limit for this
+            endpoint. Please wait and try again later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.TooManyRequestsErrorResponse"
+        "500":
+          description: Internal Server Error - An unexpected error occurred on the server.
+            This could be due to issues with the backend services or database.
+            Please try again later or contact support.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+      x-access-level: internal
+      x-metadata-status: alpha
+      x-operation-id: loginV1
+      x-rate-limit-tier: none
+  /auth/register:
+    post:
+      description: This endpoint registers a new user with a unique alias and optional
+        email and wallet address. A default free tier subscription is
+        automatically assigned upon successful registration.
+      tags:
+        - Authentication
+      summary: Register New User
+      operationId: user-register-auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/auth_viewmodels.RegisterRequest"
+        description: Registration Request Body - Contains the user's desired alias,
+          optional email, and wallet address for registration.
+        required: true
+      responses:
+        "200":
+          description: Successfully registered the user. The response includes the user's
+            ID, alias, tier, and subscription expiration details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/auth_viewmodels.RegisterResponse"
+        "400":
+          description: Bad Request - The request body is malformed or missing required
+            fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "403":
+          description: Forbidden - The user IP is blacklisted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.ForbiddenErrorResponse"
+        "409":
+          description: Conflict - The provided alias is already taken by another user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.ConflictErrorResponse"
+        "422":
+          description: Unprocessable Entity - Validation failed. The request data is
+            syntactically correct but semantically invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnprocessableEntityErrorResponse"
+        "429":
+          description: Too Many Requests - The user has exceeded the rate limit for this
+            endpoint. Please wait and try again later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.TooManyRequestsErrorResponse"
+        "500":
+          description: Internal Server Error - An unexpected error occurred on the server.
+            This could be due to issues with the backend services or database.
+            Please try again later or contact support.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+      x-access-level: internal
+      x-metadata-status: alpha
+      x-operation-id: userRegisterV1
+      x-rate-limit-tier: none
+  /user/delete:
+    post:
+      security:
+        - BearerAuth: []
+      description: Allows a logged-in user to delete their account by providing their
+        alias in the request body. The alias in the request body must match the
+        alias of the authenticated user. All associated user data, including
+        active API keys, will be permanently removed.
+      tags:
+        - User
+      summary: Delete User Account
+      operationId: delete-user-account
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/user_viewmodels.DeleteUserRequest"
+        description: User deletion request
+        required: true
+      responses:
+        "200":
+          description: User account and associated data deleted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/user_viewmodels.DeleteUserResponse"
+        "400":
+          description: Bad Request - The request is invalid (e.g., missing alias in body,
+            invalid JSON).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "401":
+          description: Unauthorized - Authentication required or invalid token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnauthorizedErrorResponse"
+        "403":
+          description: Forbidden - The authenticated user's alias does not match the alias
+            in the request body, or insufficient permissions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.ForbiddenErrorResponse"
+        "404":
+          description: Not Found - The user with the specified alias was not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.NotFoundErrorResponse"
+        "422":
+          description: Unprocessable Entity - The request data is syntactically correct
+            but semantically invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnprocessableEntityErrorResponse"
+        "429":
+          description: Too Many Requests - The user has exceeded the rate limit for this
+            endpoint. Please wait and try again later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.TooManyRequestsErrorResponse"
+        "500":
+          description: Internal Server Error - An unexpected error occurred on the server.
+            This could be due to issues with the backend services or database.
+            Please try again later or contact support.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+      x-access-level: internal
+      x-metadata-status: alpha
+      x-operation-id: deleteUserV1
+      x-rate-limit-tier: none
+  /user/me:
+    get:
+      security:
+        - BearerAuth: []
+      description: This endpoint retrieves the full profile information for the
+        authenticated user, including their user ID, alias, tier, creation
+        timestamp, and active API keys.
+      tags:
+        - User
+      summary: Get User Profile
+      operationId: get-user-profile-auth
+      responses:
+        "200":
+          description: Successfully retrieved user profile. The response contains detailed
+            user information.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/user_viewmodels.MeResponse"
+        "400":
+          description: Bad Request - The request is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "401":
+          description: Unauthorized - Authentication required. User ID not found in
+            authentication context.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnauthorizedErrorResponse"
+        "403":
+          description: Forbidden - Insufficient permissions or tier access.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.ForbiddenErrorResponse"
+        "422":
+          description: Unprocessable Entity - The request data is syntactically correct
+            but semantically invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnprocessableEntityErrorResponse"
+        "429":
+          description: Too Many Requests - The user has exceeded the rate limit for this
+            endpoint. Please wait and try again later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.TooManyRequestsErrorResponse"
+        "500":
+          description: Internal Server Error - An unexpected error occurred on the server.
+            This could be due to issues with the backend services or database.
+            Please try again later or contact support.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+      x-access-level: internal
+      x-metadata-status: alpha
+      x-operation-id: getMeV1
+      x-rate-limit-tier: none
+  /user/usage:
+    get:
+      security:
+        - BearerAuth: []
+      description: This endpoint retrieves current usage metrics for the authenticated
+        user, including total quota consumed, tier quota, remaining usage,
+        expiration details, and rate-limit windows.
+      tags:
+        - User
+      summary: Get Usage Metrics
+      operationId: get-usage-metrics-auth
+      responses:
+        "200":
+          description: Successfully retrieved usage metrics. The response contains
+            detailed usage information.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/user_viewmodels.UsageResponse"
+        "400":
+          description: Bad Request - The request is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "401":
+          description: Unauthorized - Authentication required. User ID not found in
+            authentication context.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnauthorizedErrorResponse"
+        "403":
+          description: Forbidden - Insufficient permissions or tier access.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.ForbiddenErrorResponse"
+        "422":
+          description: Unprocessable Entity - The request data is syntactically correct
+            but semantically invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnprocessableEntityErrorResponse"
+        "429":
+          description: Too Many Requests - The user has exceeded the rate limit for this
+            endpoint. Please wait and try again later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.TooManyRequestsErrorResponse"
+        "500":
+          description: Internal Server Error - An unexpected error occurred on the server.
+            This could be due to issues with the backend services or database.
+            Please try again later or contact support.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+      x-access-level: internal
+      x-metadata-status: alpha
+      x-operation-id: getUsageV1
+      x-rate-limit-tier: none
+  /user/usage/daily:
+    post:
+      security:
+        - BearerAuth: []
+      description: This endpoint retrieves aggregated daily API usage data for the
+        authenticated user, allowing filtering by date range, API key, endpoint,
+        HTTP method, and API version.
+      tags:
+        - User
+        - API Usage
+      summary: Get User Daily API Usage
+      operationId: user-daily-api-usage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/api_usage_viewmodels.UserDailyApiUsageRequest"
+        description: Daily Usage Request Body - Contains filters for date range and a
+          list of API key names.
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved daily API usage summaries. The response
+            contains a list of daily summaries aggregated by API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/api_usage_viewmodels.UserDailyApiUsageResponse"
+        "400":
+          description: Bad Request - No API keys found for this user. Please create an API
+            key to view usage.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "401":
+          description: Unauthorized - Authentication required. User ID not found in
+            authentication context.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnauthorizedErrorResponse"
+        "403":
+          description: Forbidden - Insufficient permissions or tier access.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.ForbiddenErrorResponse"
+        "422":
+          description: Unprocessable Entity - Validation failed. The request data is
+            syntactically correct but semantically invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.UnprocessableEntityErrorResponse"
+        "429":
+          description: Too Many Requests - The user has exceeded the rate limit for this
+            endpoint. Please wait and try again later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.TooManyRequestsErrorResponse"
+        "500":
+          description: Internal Server Error - An unexpected error occurred on the server.
+            This could be due to issues with the backend services or database.
+            Please try again later or contact support.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+      x-access-level: internal
+      x-metadata-status: alpha
+      x-operation-id: userDailyUsageHandlerV1
+      x-rate-limit-tier: none
   /v2/courses:
     get:
-      summary: Get all courses
-      description: Get all courses
+      security:
+        - ApiKeyAuth: []
+      description: Returns all courses from the on-chain index.
       tags:
-        - courses
+        - Scan API
+        - Courses
+      summary: List All Courses
+      operationId: v2-scan-list-courses
       responses:
-        '200':
+        "200":
           description: List of courses
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Course'
-        '400':
-          description: Bad Request
+                  $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+                    t.ModelsAdminCourseCreateResponse"
+        "500":
+          description: Failed to fetch courses
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /v2/courses/{course_id}:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  "/v2/courses/teachers/{alias}/assessments/pending":
     get:
-      summary: Get course by ID
-      description: Get a specific course by course_id
+      security:
+        - ApiKeyAuth: []
+      description: Returns assignments that need assessment for courses where the user
+        is a teacher.
       tags:
-        - courses
+        - Scan API
+        - Courses
+      summary: Get Teacher Pending Assessments
+      operationId: v2-scan-get-teacher-pending-assessments
       parameters:
-        - name: course_id
+        - description: Teacher Alias
+          name: alias
           in: path
           required: true
-          description: Course ID
           schema:
             type: string
       responses:
-        '200':
-          description: Single course
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Course'
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /v2/courses/{course_id}/students:
-    get:
-      summary: Get students by course
-      description: Get students by course_id
-      tags:
-        - courses
-      parameters:
-        - name: course_id
-          in: path
-          required: true
-          description: Course ID
-          schema:
-            type: string
-      responses:
-        '200':
-          description: List of students
+        "200":
+          description: Pending assessments
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Student'
-        '400':
-          description: Bad Request
+                  $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+                    t.ModelsPendingAssessmentResponse"
+        "500":
+          description: Failed to fetch pending assessments
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /v2/courses/{course_id}/students/{alias}:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  "/v2/courses/{course_id}/details":
     get:
-      summary: Get student by alias
-      description: Get a specific student by alias
+      security:
+        - ApiKeyAuth: []
+      description: Returns consolidated details for a course including modules,
+        teachers, and students.
       tags:
-        - courses
+        - Scan API
+        - Courses
+      summary: Get Course Details
+      operationId: v2-scan-get-course-details
       parameters:
-        - name: course_id
+        - description: Course ID
+          name: course_id
           in: path
           required: true
-          description: Course ID
-          schema:
-            type: string
-        - name: alias
-          in: path
-          required: true
-          description: Student alias
           schema:
             type: string
       responses:
-        '200':
-          description: Single student
+        "200":
+          description: Course details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Student'
-        '400':
-          description: Bad Request
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+                  t.ModelsCourseAggregateResponse"
+        "404":
+          description: Course not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal Server Error
+                $ref: "#/components/schemas/errors.NotFoundErrorResponse"
+        "500":
+          description: Failed to fetch course details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /v2/transactions/count:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  "/v2/courses/{course_id}/students/{student_alias}/status":
     get:
-      summary: Get transaction count
-      description: Get total number of all transactions
+      security:
+        - ApiKeyAuth: []
+      description: Returns a student's progress in a course (completed vs current
+        assignments).
       tags:
-        - transactions
+        - Scan API
+        - Courses
+      summary: Get Student Status
+      operationId: v2-scan-get-student-status
+      parameters:
+        - description: Course ID
+          name: course_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - description: Student Alias
+          name: student_alias
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
-        '200':
-          description: Transaction count
+        "200":
+          description: Student status
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TransactionCountResponse'
-        '500':
-          description: Internal Server Error
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+                  t.ModelsStudentStatusResponse"
+        "404":
+          description: Student or course not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /v2/user/all:
+                $ref: "#/components/schemas/errors.NotFoundErrorResponse"
+        "500":
+          description: Failed to fetch student status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/projects:
     get:
-      summary: Get all users
-      description: Get all users
+      security:
+        - ApiKeyAuth: []
+      description: Returns all projects from the on-chain index.
       tags:
-        - user
+        - Scan API
+        - Projects
+      summary: List All Projects
+      operationId: v2-scan-list-projects
       responses:
-        '200':
-          description: List of user aliases
+        "200":
+          description: List of projects
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  type: string
-        '400':
-          description: Bad Request
+                  $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+                    t.ModelsAdminProjectCreateResponse"
+        "500":
+          description: Failed to fetch projects
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /v2/user/global-state/{alias}:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  "/v2/projects/managers/{alias}/assessments/pending":
     get:
-      summary: Get user global state
-      description: Get user global state
+      security:
+        - ApiKeyAuth: []
+      description: Returns tasks pending assessment for projects managed by this user.
       tags:
-        - user
+        - Scan API
+        - Projects
+      summary: Get Manager Pending Task Assessments
+      operationId: v2-scan-get-manager-pending-assessments
       parameters:
-        - name: alias
+        - description: Manager Alias
+          name: alias
           in: path
           required: true
-          description: User alias
           schema:
             type: string
       responses:
-        '200':
-          description: User global state
+        "200":
+          description: Pending task assessments
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserGlobalState'
-        '400':
-          description: Bad Request
+                type: array
+                items:
+                  $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+                    t.ApiPendingTaskAssessment"
+        "500":
+          description: Failed to fetch pending assessments
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal Server Error
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  "/v2/projects/{project_id}/contributors/{contributor_alias}/status":
+    get:
+      security:
+        - ApiKeyAuth: []
+      description: Returns the contributor's progress in a specific project.
+      tags:
+        - Scan API
+        - Projects
+      summary: Get Contributor Status
+      operationId: v2-scan-get-contributor-status
+      parameters:
+        - description: Project ID
+          name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - description: Contributor Alias
+          name: contributor_alias
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Contributor status
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+                  t.ApiContributorProjectStatus"
+        "404":
+          description: Contributor or project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.NotFoundErrorResponse"
+        "500":
+          description: Failed to fetch contributor status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  "/v2/projects/{project_id}/details":
+    get:
+      security:
+        - ApiKeyAuth: []
+      description: Returns consolidated details for a project including tasks,
+        contributors, and assessments.
+      tags:
+        - Scan API
+        - Projects
+      summary: Get Project Details
+      operationId: v2-scan-get-project-details
+      parameters:
+        - description: Project ID
+          name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+                  t.ModelsProjectAggregateResponse"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.NotFoundErrorResponse"
+        "500":
+          description: Failed to fetch project details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/transactions:
+    get:
+      security:
+        - ApiKeyAuth: []
+      description: Returns a paginated list of all tracked transactions.
+      tags:
+        - Scan API
+        - Transactions
+      summary: List Transactions
+      operationId: v2-scan-list-transactions
+      parameters:
+        - description: Page number
+          name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - description: Items per page
+          name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Paginated transactions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+                  t.ModelsPaginatedResponse"
+        "500":
+          description: Failed to fetch transactions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/course/owner/teachers/manage:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction to add or remove teachers from a course.
+      tags:
+        - TX API
+        - Course
+      summary: Manage Teachers
+      operationId: v2-tx-manage-teachers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.M\
+                anageTeachersTxRequest"
+        description: Manage teachers request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/course/student/assignment/commit:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction to commit to an assignment.
+      tags:
+        - TX API
+        - Course
+      summary: Commit Assignment
+      operationId: v2-tx-commit-assignment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.C\
+                ommitAssignmentTxRequest"
+        description: Commit assignment request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/course/student/assignment/update:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction to update assignment completion info.
+      tags:
+        - TX API
+        - Course
+      summary: Update Assignment
+      operationId: v2-tx-update-assignment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.A\
+                ssignmentActionTxRequest"
+        description: Update assignment request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/course/student/credential/claim:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction to claim course credentials.
+      tags:
+        - TX API
+        - Course
+      summary: Claim Course Credential
+      operationId: v2-tx-claim-course-credential
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.C\
+                laimCourseCredentialsTxRequest"
+        description: Claim credential request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/course/teacher/assignments/assess:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction to assess student assignments.
+      tags:
+        - TX API
+        - Course
+      summary: Assess Assignments
+      operationId: v2-tx-assess-assignments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.A\
+                ssessAssignmentsTxRequest"
+        description: Assess assignments request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/course/teacher/modules/manage:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction to manage course modules.
+      tags:
+        - TX API
+        - Course
+      summary: Manage Modules
+      operationId: v2-tx-manage-modules
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.M\
+                anageModulesTxRequest"
+        description: Manage modules request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/global/user/access-token/mint:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction to mint a new access token for a user.
+      tags:
+        - TX API
+        - Global
+      summary: Mint Access Token
+      operationId: v2-tx-mint-access-token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.M\
+                intAccessTokenTxRequest"
+        description: Mint access token request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/instance/owner/course/create:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction to initialize a new course.
+      tags:
+        - TX API
+        - Instance
+      summary: Create Course
+      operationId: v2-tx-create-course
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.C\
+                reateCourseTxRequest"
+        description: Create course request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR with course info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponseInitCourse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/instance/owner/project/create:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction to initialize a new project.
+      tags:
+        - TX API
+        - Instance
+      summary: Create Project
+      operationId: v2-tx-create-project
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.C\
+                reateProjectTxRequest"
+        description: Create project request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR with project info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponseInitProject"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/project/contributor/credential/claim:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction to claim project credentials.
+      tags:
+        - TX API
+        - Project
+      summary: Claim Project Credential
+      operationId: v2-tx-claim-project-credential
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.C\
+                laimProjectCredentialsTxRequest"
+        description: Claim credential request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/project/contributor/task/action:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction for task actions (update info or
+        leave project).
+      tags:
+        - TX API
+        - Project
+      summary: Task Action
+      operationId: v2-tx-task-action
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.T\
+                askActionTxRequest"
+        description: Task action request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/project/contributor/task/commit:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction to commit to a project task.
+      tags:
+        - TX API
+        - Project
+      summary: Commit Task
+      operationId: v2-tx-commit-task
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.C\
+                ommitTaskTxRequest"
+        description: Commit task request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/project/manager/tasks/assess:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction to assess contributor task submissions.
+      tags:
+        - TX API
+        - Project
+      summary: Assess Tasks
+      operationId: v2-tx-assess-tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.T\
+                asksAssessV2TxRequest"
+        description: Assess tasks request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/project/manager/tasks/manage:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction to manage project tasks.
+      tags:
+        - TX API
+        - Project
+      summary: Manage Tasks
+      operationId: v2-tx-manage-tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.M\
+                anageTasksTxRequest"
+        description: Manage tasks request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/project/owner/contributor-blacklist/manage:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction to manage the contributor blacklist.
+      tags:
+        - TX API
+        - Project
+      summary: Manage Contributor Blacklist
+      operationId: v2-tx-manage-contributor-blacklist
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.M\
+                anageContributorBlacklistTxRequest"
+        description: Manage blacklist request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/project/owner/managers/manage:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction to manage project managers.
+      tags:
+        - TX API
+        - Project
+      summary: Manage Managers
+      operationId: v2-tx-manage-managers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.M\
+                anageManagersTxRequest"
+        description: Manage managers request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  /v2/tx/project/user/treasury/add-funds:
+    post:
+      security:
+        - ApiKeyAuth: []
+      description: Build an unsigned transaction to add funds to a project treasury.
+      tags:
+        - TX API
+        - Project
+      summary: Add Funds to Treasury
+      operationId: v2-tx-add-funds
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.A\
+                ddFundsTxRequest"
+        description: Add funds request
+        required: true
+      responses:
+        "200":
+          description: Unsigned transaction CBOR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+                  nsignedTxResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.BadRequestErrorResponse"
+        "500":
+          description: Failed to build transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+  "/v2/users/{alias}/state":
+    get:
+      security:
+        - ApiKeyAuth: []
+      description: Returns a user's enrolled and completed courses and projects.
+      tags:
+        - Scan API
+        - Users
+      summary: Get User Global State
+      operationId: v2-scan-get-user-state
+      parameters:
+        - description: User Alias
+          name: alias
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+                  t.ModelsUserGlobalStateResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.NotFoundErrorResponse"
+        "500":
+          description: Failed to fetch user state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/errors.InternalServerErrorResponse"
+tags:
+  - description: User authentication management.
+    name: Authentication
+    externalDocs:
+      description: External documentation for Authentication APIs.
+      url: https://andamio.io/docs/authentication
+  - description: Operations for managing API keys.
+    name: API Key
+    externalDocs:
+      description: External documentation for API Key APIs.
+      url: https://andamio.io/docs/api-key
+  - description: User profile and account management operations.
+    name: User
+    externalDocs:
+      description: External documentation for User APIs.
+      url: https://andamio.io/docs/user
+  - description: Health check endpoints.
+    name: Health
+    externalDocs:
+      url: https://andamio.io/docs/health
+  - description: Monitoring endpoints.
+    name: Metrics
+    externalDocs:
+      url: https://andamio.io/docs/metrics
+  - description: General endpoints.
+    name: General
+    externalDocs:
+      description: External documentation for Health APIs.
+      url: https://andamio.io/docs/general
+  - description: Operations related to interacting with the Andamio Node Backend for
+      data retrieval and specific actions.
+    name: Node Backend API
+    externalDocs:
+      description: External documentation for Node Backend APIs.
+      url: https://andamio.io/docs/node-backend-api
+  - description: Operations related to interacting with the Andamio Platform for
+      data retrieval and specific actions.
+    name: Platform API
+    externalDocs:
+      description: External documentation for Platform APIs.
+      url: https://andamio.io/docs/platform-api
+externalDocs:
+  description: OpenAPI Specification
+  url: https://swagger.io/resources/open-api/
+x-api-id: andamio-api-gateway
 components:
+  securitySchemes:
+    ApiKeyAuth:
+      description: 'API Key for authentication. Example: "YOUR_API_KEY"'
+      type: apiKey
+      name: X-API-Key
+      in: header
+    BearerAuth:
+      description: 'Bearer token for authentication. Type "Bearer" followed by a space
+        and JWT token. Example: "Bearer YOUR_JWT_TOKEN"'
+      type: apiKey
+      name: Authorization
+      in: header
   schemas:
-    # Request/Response schemas
-    UnsignedTxResponse:
+    admin_viewmodels.SetUserRoleRequest:
       type: object
       required:
-        - unsignedTxCBOR
+        - user_id
       properties:
-        unsignedTxCBOR:
+        tier_id:
+          type: integer
+          example: 1
+        tier_name:
           type: string
-
-    UnsignedTxResponseInitCourse:
-      type: object
-      required:
-        - unsignedTxCBOR
-        - courseId
-      properties:
-        unsignedTxCBOR:
+          example: pro
+        user_id:
           type: string
-        courseId:
+          example: 123e4567-e89b-12d3-a456-426614174000
+    admin_viewmodels.SetUserRoleResponse:
+      type: object
+      required:
+        - tier_id
+        - tier_name
+      properties:
+        message:
           type: string
-          description: Course ID (minting policy hash)
-          pattern: '^[a-fA-F0-9]{56}$'
-
-    ErrorResponse:
-      type: object
-      properties:
-        error:
+          example: User role updated successfully.
+        tier_id:
+          type: integer
+          minimum: 1
+          example: 1
+        tier_name:
           type: string
-
-    TransactionCountResponse:
-      type: object
-      properties:
-        count:
-          $ref: '#/components/schemas/TransactionCounts'
-
-    TransactionCounts:
-      type: object
-      properties:
-        assess_assignment:
-          type: integer
-        claim_credential:
-          type: integer
-        create_course:
-          type: integer
-        enroll_course:
-          type: integer
-        manage_modules:
-          type: integer
-        mint_access_token:
-          type: integer
-        submit_assignment:
-          type: integer
-        total:
-          type: integer
-        unknown:
-          type: integer
-        update_assignment:
-          type: integer
-        update_teachers:
-          type: integer
-
-    # Basic types
-    GYAddressBech32:
-      type: string
-      description: An address, serialised as Bech32
-      example: addr_test1qrsuhwqdhz0zjgnf46unas27h93amfghddnff8lpc2n28rgmjv8f77ka0zshfgssqr5cnl64zdnde5f8q2xt923e7ctqu49mg5
-      format: bech32
-
-    Alias:
-      type: string
-      description: Plain text alias (not hex encoded). Only alphanumeric characters and underscores allowed
-      example: JohnDoe
-      maxLength: 31
-      minLength: 1
-      pattern: '^[a-zA-Z0-9_]+$'
-
-    GYMintingPolicyId:
-      type: string
-      description: Hash of a minting policy script
-      example: ff80aaaf03a273b8f5c558168dc0e2377eea810badbae6eceefc14ef
-      pattern: '^[a-fA-F0-9]{56}$'
-      minLength: 56
-      maxLength: 56
-
-    SltHash:
-      type: string
-      description: Hex encoded hash (exactly 64 characters)
-      example: c8bc55db03d6ead9311272b7c73637e6999f8306574321f009d7053eaa98cf7b
-      pattern: '^[a-fA-F0-9]{64}$'
-      minLength: 64
-      maxLength: 64
-
-    WalletData:
-      type: object
-      required:
-        - usedAddresses
-        - changeAddress
-      properties:
-        usedAddresses:
-          type: array
-          items:
-            $ref: '#/components/schemas/GYAddressBech32'
-        changeAddress:
-          $ref: '#/components/schemas/GYAddressBech32'
-
-    # Transaction request schemas
-    MintAccessTokenV2TxRequest:
-      type: object
-      required:
-        - walletData
-        - alias
-      properties:
-        walletData:
-          $ref: '#/components/schemas/GYAddressBech32'
-        alias:
-          $ref: '#/components/schemas/Alias'
-
-    InitCourseV2TxRequest:
-      type: object
-      required:
-        - alias
-        - teachers
-      properties:
-        walletData:
-          $ref: '#/components/schemas/WalletData'
-        alias:
-          $ref: '#/components/schemas/Alias'
-        teachers:
-          type: array
-          items:
-            $ref: '#/components/schemas/Alias'
-
-    ManageCourseGovernanceTxRequest:
-      type: object
-      required:
-        - alias
-        - courseId
-        - teachersToAdd
-        - teachersToRemove
-      properties:
-        walletData:
-          $ref: '#/components/schemas/WalletData'
-        alias:
-          $ref: '#/components/schemas/Alias'
-        courseId:
-          $ref: '#/components/schemas/GYMintingPolicyId'
-        teachersToAdd:
-          type: array
-          items:
-            $ref: '#/components/schemas/Alias'
-        teachersToRemove:
-          type: array
-          items:
-            $ref: '#/components/schemas/Alias'
-
-    ManageModulesV2TxRequest:
-      type: object
-      required:
-        - alias
-        - courseId
-        - modulesToMint
-        - modulesToUpdate
-        - modulesToBurn
-      properties:
-        walletData:
-          $ref: '#/components/schemas/WalletData'
-        alias:
-          $ref: '#/components/schemas/Alias'
-        courseId:
-          $ref: '#/components/schemas/GYMintingPolicyId'
-        modulesToMint:
-          type: array
-          items:
-            $ref: '#/components/schemas/MintModuleV2'
-        modulesToUpdate:
-          type: array
-          items:
-            $ref: '#/components/schemas/UpdateModuleV2'
-        modulesToBurn:
-          type: array
-          items:
-            $ref: '#/components/schemas/SltHash'
-
-    MintModuleV2:
-      type: object
-      required:
-        - slts
-        - allowedStudents_V2
-        - prerequisiteAssignments_V2
-      properties:
-        slts:
-          type: array
-          items:
-            type: string
-        allowedStudents_V2:
-          type: array
-          items:
-            $ref: '#/components/schemas/GYMintingPolicyId'
-        prerequisiteAssignments_V2:
-          type: array
-          items:
-            $ref: '#/components/schemas/SltHash'
-
-    UpdateModuleV2:
-      type: object
-      required:
-        - sltHash
-        - allowedStudents_V2
-        - prerequisiteAssignments_V2
-      properties:
-        sltHash:
-          $ref: '#/components/schemas/SltHash'
-        allowedStudents_V2:
-          type: array
-          items:
-            $ref: '#/components/schemas/GYMintingPolicyId'
-        prerequisiteAssignments_V2:
-          type: array
-          items:
-            $ref: '#/components/schemas/SltHash'
-
-    DecideAssignmentV2TxRequest:
-      type: object
-      required:
-        - alias
-        - courseId
-        - assignmentDecisions
-      properties:
-        walletData:
-          $ref: '#/components/schemas/WalletData'
-        alias:
-          $ref: '#/components/schemas/Alias'
-        courseId:
-          $ref: '#/components/schemas/GYMintingPolicyId'
-        assignmentDecisions:
-          type: array
-          items:
-            $ref: '#/components/schemas/AssignmentOutcome'
-
-    AssignmentOutcome:
-      type: object
-      description: Course assignment outcome - accept or refuse with student alias
-      required:
-        - outcome
-        - alias
-      properties:
-        outcome:
+          minLength: 1
+          example: pro
+        user_id:
           type: string
-          enum:
-            - accept
-            - refuse
-        alias:
-          $ref: '#/components/schemas/Alias'
-      example:
-        alias: JohnDoe
-        outcome: accept
-
-    MintCourseStateV2TxRequest:
+          example: 123e4567-e89b-12d3-a456-426614174000
+    andamio-api_internal_internal_api_andamioscan_client.ApiContributorProjectStatus:
       type: object
-      required:
-        - alias
-        - courseId
       properties:
-        walletData:
-          $ref: '#/components/schemas/WalletData'
         alias:
-          $ref: '#/components/schemas/Alias'
-        courseId:
-          $ref: '#/components/schemas/GYMintingPolicyId'
-        commitData:
-          $ref: '#/components/schemas/CommitData'
-
-    CommitData:
-      type: object
-      required:
-        - sltHash
-        - assignmentInfo
-      properties:
-        sltHash:
-          $ref: '#/components/schemas/SltHash'
-        assignmentInfo:
           type: string
-
-    AssignmentActionV2TxRequest:
-      type: object
-      required:
-        - alias
-        - courseId
-        - assignmentInfo
-      properties:
-        walletData:
-          $ref: '#/components/schemas/WalletData'
-        alias:
-          $ref: '#/components/schemas/Alias'
-        courseId:
-          $ref: '#/components/schemas/GYMintingPolicyId'
-        assignmentInfo:
+        claimed_credentials:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsAsset"
+        joined_at:
+          type: integer
+        project_id:
           type: string
-        maybeNewSltHash:
-          $ref: '#/components/schemas/SltHash'
-
-    BurnCourseStateV2TxRequest:
+        tasks_accepted:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsTask"
+        tasks_submitted:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsTask"
+    andamio-api_internal_internal_api_andamioscan_client.ApiPendingTaskAssessment:
       type: object
-      required:
-        - alias
-        - courseId
       properties:
-        walletData:
-          $ref: '#/components/schemas/WalletData'
-        alias:
-          $ref: '#/components/schemas/Alias'
-        courseId:
-          $ref: '#/components/schemas/GYMintingPolicyId'
-
-    Course:
+        content:
+          type: string
+        project_id:
+          type: string
+        submission_tx_hash:
+          type: string
+        submitted_by:
+          type: string
+        task:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+            t.ModelsTask"
+    andamio-api_internal_internal_api_andamioscan_client.GormDeletedAt:
+      type: object
+      properties:
+        time:
+          type: string
+        valid:
+          description: Valid is true if Time is not NULL
+          type: boolean
+    andamio-api_internal_internal_api_andamioscan_client.ModelsAdminCourseCreateResponse:
       type: object
       properties:
         course_address:
           type: string
         course_id:
           type: string
-        course_state_policy_id:
+        owner:
           type: string
-        modules:
-          type: array
-          items:
-            $ref: '#/components/schemas/Module'
+        slot:
+          type: integer
+        student_state_id:
+          type: string
         teachers:
           type: array
           items:
             type: string
-
-    Module:
+        tx_hash:
+          type: string
+    andamio-api_internal_internal_api_andamioscan_client.ModelsAdminProjectCreateResponse:
+      type: object
+      properties:
+        contributor_state_id:
+          type: string
+        created_at:
+          type: string
+        managers:
+          type: array
+          items:
+            type: string
+        owner:
+          type: string
+        prerequisites:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsPrerequisite"
+        project_address:
+          type: string
+        project_id:
+          type: string
+        slot:
+          type: integer
+        treasury_address:
+          type: string
+        tx_hash:
+          type: string
+    andamio-api_internal_internal_api_andamioscan_client.ModelsAssessmentStatus:
+      type: string
+      enum:
+        - Accept
+        - Refuse
+      x-enum-varnames:
+        - Accept
+        - Refuse
+    andamio-api_internal_internal_api_andamioscan_client.ModelsAsset:
+      type: object
+      properties:
+        amount:
+          type: string
+        name:
+          type: string
+        policy_id:
+          type: string
+    andamio-api_internal_internal_api_andamioscan_client.ModelsAssignmentInfo:
       type: object
       properties:
         assignment_id:
           type: string
-        created_by:
+        content:
           type: string
+    andamio-api_internal_internal_api_andamioscan_client.ModelsCompletedCourseInfo:
+      type: object
+      properties:
+        claimed_credentials:
+          type: array
+          items:
+            type: string
+        course_id:
+          type: string
+    andamio-api_internal_internal_api_andamioscan_client.ModelsCompletedProjectInfo:
+      type: object
+      properties:
+        credentials:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsAsset"
+        project_id:
+          type: string
+    andamio-api_internal_internal_api_andamioscan_client.ModelsContributorProjectCredentialClaim:
+      type: object
+      properties:
+        alias:
+          type: string
+        createdAt:
+          type: string
+        credential_id:
+          type: string
+        credentials:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsAsset"
+        deletedAt:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+            t.GormDeletedAt"
+        id:
+          type: integer
+        project_id:
+          type: string
+        slot:
+          type: integer
+        tx_hash:
+          type: string
+        updatedAt:
+          type: string
+    andamio-api_internal_internal_api_andamioscan_client.ModelsContributorProjectSubmitTask:
+      type: object
+      properties:
+        alias:
+          type: string
+        content:
+          description: Submission content
+          type: string
+        createdAt:
+          type: string
+        deletedAt:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+            t.GormDeletedAt"
+        id:
+          type: integer
+        project_id:
+          type: string
+        slot:
+          type: integer
+        task:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+            t.ModelsTask"
+        tx_hash:
+          type: string
+        updatedAt:
+          type: string
+    andamio-api_internal_internal_api_andamioscan_client.ModelsCourseAggregateResponse:
+      type: object
+      properties:
+        course_address:
+          type: string
+        course_id:
+          type: string
+        modules:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsModulesCreated"
+        past_students:
+          type: array
+          items:
+            type: string
+        student_state_id:
+          type: string
+        students:
+          type: array
+          items:
+            type: string
+        teachers:
+          type: array
+          items:
+            type: string
+    andamio-api_internal_internal_api_andamioscan_client.ModelsManagerProjectAssessTask:
+      type: object
+      properties:
+        alias:
+          type: string
+        assessments:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsTaskAssessment"
+        createdAt:
+          type: string
+        deletedAt:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+            t.GormDeletedAt"
+        id:
+          type: integer
+        project_id:
+          type: string
+        slot:
+          type: integer
+        task:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+            t.ModelsTask"
+        tx_hash:
+          type: string
+        updatedAt:
+          type: string
+    andamio-api_internal_internal_api_andamioscan_client.ModelsManagerProjectFundTreasury:
+      type: object
+      properties:
+        alias:
+          type: string
+        assets:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsAsset"
+        createdAt:
+          type: string
+        deletedAt:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+            t.GormDeletedAt"
+        id:
+          type: integer
+        lovelace:
+          type: integer
+        project_id:
+          type: string
+        slot:
+          type: integer
+        tx_hash:
+          type: string
+        updatedAt:
+          type: string
+    andamio-api_internal_internal_api_andamioscan_client.ModelsModuleCreate:
+      type: object
+      properties:
         prerequisites:
           type: array
           items:
@@ -789,41 +2482,1623 @@ components:
           type: array
           items:
             type: string
-
-    Student:
+    andamio-api_internal_internal_api_andamioscan_client.ModelsModulesCreated:
+      type: object
+      properties:
+        assignment_id:
+          type: string
+        created_by:
+          type: string
+        module:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+            t.ModelsModuleCreate"
+    andamio-api_internal_internal_api_andamioscan_client.ModelsPaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+        meta:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+            t.ModelsPaginationMeta"
+    andamio-api_internal_internal_api_andamioscan_client.ModelsPaginationMeta:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        limit:
+          type: integer
+        total_count:
+          type: integer
+        total_pages:
+          type: integer
+    andamio-api_internal_internal_api_andamioscan_client.ModelsPendingAssessmentResponse:
+      type: object
+      properties:
+        assignment_id:
+          type: string
+        content:
+          type: string
+        course_id:
+          type: string
+        student_alias:
+          type: string
+        submission_slot:
+          type: integer
+        submission_tx_hash:
+          type: string
+    andamio-api_internal_internal_api_andamioscan_client.ModelsPrerequisite:
+      type: object
+      properties:
+        assignment_ids:
+          type: array
+          items:
+            type: string
+        course_id:
+          type: string
+    andamio-api_internal_internal_api_andamioscan_client.ModelsPrerequisiteResponse:
+      type: object
+      properties:
+        assignment_ids:
+          type: array
+          items:
+            type: string
+        contributor_state_id:
+          type: string
+        course_id:
+          type: string
+    andamio-api_internal_internal_api_andamioscan_client.ModelsProjectAggregateResponse:
+      type: object
+      properties:
+        assessments:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsManagerProjectAssessTask"
+        contributors:
+          type: array
+          items:
+            type: string
+        credential_claims:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsContributorProjectCredentialClaim"
+        prerequisites:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsPrerequisiteResponse"
+        project_id:
+          type: string
+        submissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsContributorProjectSubmitTask"
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsTask"
+        treasury_fundings:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsManagerProjectFundTreasury"
+    andamio-api_internal_internal_api_andamioscan_client.ModelsStudentStatusResponse:
       type: object
       properties:
         alias:
           type: string
-        completed:
+        completed_assignments:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsAssignmentInfo"
+        course_id:
+          type: string
+        current_assignment:
+          description: Pointer to allow null
+          allOf:
+            - $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+                t.ModelsAssignmentInfo"
+    andamio-api_internal_internal_api_andamioscan_client.ModelsTask:
+      type: object
+      properties:
+        assets:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsAsset"
+        content:
+          type: string
+        contributor_state_id:
+          type: string
+        created_by:
+          type: string
+        expiration:
+          type: string
+        expiration_posix:
+          type: integer
+        lovelace:
+          type: integer
+        task_id:
+          type: string
+    andamio-api_internal_internal_api_andamioscan_client.ModelsTaskAssessment:
+      type: object
+      properties:
+        contributor_alias:
+          type: string
+        decision:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+            t.ModelsAssessmentStatus"
+    andamio-api_internal_internal_api_andamioscan_client.ModelsUserGlobalStateResponse:
+      type: object
+      properties:
+        alias:
+          type: string
+        completed_courses:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsCompletedCourseInfo"
+        completed_projects:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_andamioscan_clien\
+              t.ModelsCompletedProjectInfo"
+        enrolled_courses:
           type: array
           items:
             type: string
+        joined_projects:
+          type: array
+          items:
+            type: string
+    andamio-api_internal_internal_api_atlas_tx_client.AddFundsTxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        deposit_value:
+          description: List of (asset class, quantity) pairs. This is an asset class, i.e.
+            either \"lovelace\" or some other token with its minting policy and
+            token name delimited by dot (.).
+          type: array
+          items:
+            type: array
+            items:
+              type: object
+              additionalProperties: true
+        initiator_data:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.W\
+            alletData"
+        project_id:
+          description: This is the hash of a minting policy script.
+          type: string
+    andamio-api_internal_internal_api_atlas_tx_client.AssessAssignmentsTxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        assignment_decisions:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.A\
+              ssignmentOutcome"
         course_id:
+          description: This is the hash of a minting policy script.
           type: string
-        current:
+        initiator_data:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.W\
+            alletData"
+    andamio-api_internal_internal_api_atlas_tx_client.AssignmentActionTxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
           type: string
-
-    UserCourse:
+        assignment_info:
+          description: A text string with a maximum length of 140 characters
+          type: string
+        course_id:
+          description: This is the hash of a minting policy script.
+          type: string
+        initiator_data:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.W\
+            alletData"
+    andamio-api_internal_internal_api_atlas_tx_client.AssignmentOutcome:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        outcome:
+          type: string
+    andamio-api_internal_internal_api_atlas_tx_client.ClaimCourseCredentialsTxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        course_id:
+          description: This is the hash of a minting policy script.
+          type: string
+        initiator_data:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.W\
+            alletData"
+    andamio-api_internal_internal_api_atlas_tx_client.ClaimProjectCredentialsTxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        contributor_state_id:
+          description: This is the hash of a minting policy script.
+          type: string
+        fee_tier:
+          type: string
+        initiator_data:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.W\
+            alletData"
+        project_id:
+          description: This is the hash of a minting policy script.
+          type: string
+    andamio-api_internal_internal_api_atlas_tx_client.CommitAssignmentTxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        assignment_info:
+          description: A text string with a maximum length of 140 characters
+          type: string
+        course_id:
+          description: This is the hash of a minting policy script.
+          type: string
+        initiator_data:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.W\
+            alletData"
+        slt_hash:
+          description: Hex encoded hash of slts (exactly 64 characters)
+          type: string
+    andamio-api_internal_internal_api_atlas_tx_client.CommitTaskTxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        contributor_state_id:
+          description: This is the hash of a minting policy script.
+          type: string
+        fee_tier:
+          type: string
+        initiator_data:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.W\
+            alletData"
+        project_id:
+          description: This is the hash of a minting policy script.
+          type: string
+        task_hash:
+          description: Hex encoded hash of slts (exactly 64 characters)
+          type: string
+        task_info:
+          description: A text string with a maximum length of 140 characters
+          type: string
+    andamio-api_internal_internal_api_atlas_tx_client.CreateCourseTxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        initiator_data:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.W\
+            alletData"
+        teachers:
+          type: array
+          items:
+            type: string
+    andamio-api_internal_internal_api_atlas_tx_client.CreateProjectTxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        course_prereqs:
+          type: array
+          items:
+            type: array
+            items:
+              type: object
+              additionalProperties: true
+        initiator_data:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.W\
+            alletData"
+        managers:
+          type: array
+          items:
+            type: string
+    andamio-api_internal_internal_api_atlas_tx_client.ManageContributorBlacklistTxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        aliases_to_add:
+          type: array
+          items:
+            type: string
+        aliases_to_remove:
+          type: array
+          items:
+            type: string
+        initiator_data:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.W\
+            alletData"
+        project_id:
+          description: This is the hash of a minting policy script.
+          type: string
+    andamio-api_internal_internal_api_atlas_tx_client.ManageManagersTxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        initiator_data:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.W\
+            alletData"
+        managers_to_add:
+          type: array
+          items:
+            type: string
+        managers_to_remove:
+          type: array
+          items:
+            type: string
+        project_id:
+          description: This is the hash of a minting policy script.
+          type: string
+    andamio-api_internal_internal_api_atlas_tx_client.ManageModulesTxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        course_id:
+          description: This is the hash of a minting policy script.
+          type: string
+        initiator_data:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.W\
+            alletData"
+        modules_to_add:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.M\
+              intModuleV2"
+        modules_to_remove:
+          type: array
+          items:
+            type: string
+        modules_to_update:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.U\
+              pdateModuleV2"
+    andamio-api_internal_internal_api_atlas_tx_client.ManageTasksTxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        contributor_state_id:
+          description: This is the hash of a minting policy script.
+          type: string
+        deposit_value:
+          description: List of (asset class, quantity) pairs. This is an asset class, i.e.
+            either \"lovelace\" or some other token with its minting policy and
+            token name delimited by dot (.).
+          type: array
+          items:
+            type: array
+            items:
+              type: object
+              additionalProperties: true
+        initiator_data:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.W\
+            alletData"
+        project_id:
+          description: This is the hash of a minting policy script.
+          type: string
+        tasks_to_add:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.T\
+              askData"
+        tasks_to_remove:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.T\
+              askData"
+    andamio-api_internal_internal_api_atlas_tx_client.ManageTeachersTxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        course_id:
+          description: This is the hash of a minting policy script.
+          type: string
+        initiator_data:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.W\
+            alletData"
+        teachers_to_add:
+          type: array
+          items:
+            type: string
+        teachers_to_remove:
+          type: array
+          items:
+            type: string
+    andamio-api_internal_internal_api_atlas_tx_client.MintAccessTokenTxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        initiator_data:
+          description: An address, serialised as Bech32.
+          type: string
+    andamio-api_internal_internal_api_atlas_tx_client.MintModuleV2:
+      type: object
+      properties:
+        allowed_student_state_ids:
+          type: array
+          items:
+            type: string
+        prereq_slt_hashes:
+          type: array
+          items:
+            type: string
+        slts:
+          type: array
+          items:
+            type: string
+    andamio-api_internal_internal_api_atlas_tx_client.ProjectOutcome:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        outcome:
+          type: string
+    andamio-api_internal_internal_api_atlas_tx_client.TaskActionTxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        initiator_data:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.W\
+            alletData"
+        project_id:
+          description: This is the hash of a minting policy script.
+          type: string
+        project_info:
+          description: A text string with a maximum length of 140 characters
+          type: string
+    andamio-api_internal_internal_api_atlas_tx_client.TaskData:
+      type: object
+      properties:
+        expiration_posix:
+          type: integer
+        lovelace_amount:
+          type: integer
+        native_assets:
+          description: List of (asset class, quantity) pairs. This is an asset class, i.e.
+            either \"lovelace\" or some other token with its minting policy and
+            token name delimited by dot (.).
+          type: array
+          items:
+            type: array
+            items:
+              type: object
+              additionalProperties: true
+        project_content:
+          description: A text string with a maximum length of 140 characters
+          type: string
+    andamio-api_internal_internal_api_atlas_tx_client.TasksAssessV2TxRequest:
+      type: object
+      properties:
+        alias:
+          description: Plain text alias (not hex encoded). Only alphanumeric characters
+            and underscores allowed.
+          type: string
+        contributor_state_id:
+          description: This is the hash of a minting policy script.
+          type: string
+        initiator_data:
+          $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.W\
+            alletData"
+        project_id:
+          description: This is the hash of a minting policy script.
+          type: string
+        task_decisions:
+          type: array
+          items:
+            $ref: "#/components/schemas/andamio-api_internal_internal_api_atlas_tx_client.P\
+              rojectOutcome"
+    andamio-api_internal_internal_api_atlas_tx_client.UnsignedTxResponse:
+      type: object
+      properties:
+        unsigned_tx:
+          type: string
+    andamio-api_internal_internal_api_atlas_tx_client.UnsignedTxResponseInitCourse:
       type: object
       properties:
         course_id:
+          description: This is the hash of a minting policy script.
           type: string
-        credential_id:
+        unsigned_tx:
           type: string
-        credentials:
+    andamio-api_internal_internal_api_atlas_tx_client.UnsignedTxResponseInitProject:
+      type: object
+      properties:
+        project_id:
+          description: This is the hash of a minting policy script.
+          type: string
+        unsigned_tx:
+          type: string
+    andamio-api_internal_internal_api_atlas_tx_client.UpdateModuleV2:
+      type: object
+      properties:
+        allowed_student_state_ids:
           type: array
           items:
             type: string
+        prereq_slt_hashes:
+          type: array
+          items:
+            type: string
+        slt_hash:
+          description: Hex encoded hash of slts (exactly 64 characters)
+          type: string
+    andamio-api_internal_internal_api_atlas_tx_client.WalletData:
+      type: object
+      properties:
+        change_address:
+          description: An address, serialised as Bech32.
+          type: string
+        used_addresses:
+          type: array
+          items:
+            type: string
+    api_key_viewmodels.APIKeyRequest:
+      type: object
+      required:
+        - api_key_name
+      properties:
+        api_key_name:
+          type: string
+          maxLength: 64
+          minLength: 3
+          example: MyFirstKey
+        expires_in_days:
+          type: integer
+          minimum: 1
+          example: 365
+    api_key_viewmodels.APIKeyResponse:
+      type: object
+      properties:
+        api_key:
+          type: string
+          example: ant-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        created_at:
+          type: string
+          example: 2025-08-31T23:59:59Z
+        expires_at:
+          type: string
+          example: 2026-08-31T23:59:59Z
+        expires_in_days:
+          type: integer
+          example: 365
+        is_active:
+          type: boolean
+          example: true
+        name:
+          type: string
+          example: MyFirstKey
+    api_key_viewmodels.DeleteAPIKeyRequest:
+      type: object
+      required:
+        - api_key_name
+      properties:
+        api_key_name:
+          type: string
+          maxLength: 64
+          minLength: 3
+          example: MyFirstKey
+    api_key_viewmodels.DeleteAPIKeyResponse:
+      type: object
+      properties:
+        confirmation:
+          type: string
+          example: API key deleted successfully
+    api_key_viewmodels.RotateAPIKeyRequest:
+      type: object
+      required:
+        - api_key_name
+      properties:
+        api_key_name:
+          type: string
+          maxLength: 64
+          minLength: 3
+          example: MyFirstKey
+        expires_in_days:
+          type: integer
+          minimum: 1
+          example: 365
+    api_key_viewmodels.RotateAPIKeyResponse:
+      type: object
+      properties:
+        confirmation:
+          type: string
+          example: API key expiration extended to 2026-08-31T23:59:59Z
+    api_usage_viewmodels.APIUsage:
+      type: object
+      properties:
+        api_key_name:
+          type: string
+          example: MyFirstKey
+        api_version:
+          type: string
+          example: v1
+        authentication_method:
+          type: string
+          example: API_KEY
+        cache_hit:
+          type: boolean
+          example: false
+        created_at:
+          type: string
+          example: 2023-01-01T12:34:56Z
+        data_transfer_in_bytes:
+          type: integer
+          example: 1024
+        data_transfer_out_bytes:
+          type: integer
+          example: 2048
+        endpoint:
+          type: string
+          example: /v1/data
+        error_count:
+          type: integer
+          example: 0
+        http_method:
+          type: string
+          example: GET
+        id:
+          type: string
+          example: a1b2c3d4-e5f6-7890-1234-567890abcdef
+        ip_address:
+          type: string
+          example: 192.168.1.1
+        latency_to_db_ms:
+          type: integer
+          example: 20
+        quota_exceeded:
+          type: boolean
+          example: false
+        rate_limit_type:
+          type: string
+          example: minute
+        rate_limited:
+          type: boolean
+          example: false
+        remaining_quota:
+          type: integer
+          example: 999
+        remaining_rate_limit:
+          type: integer
+          example: 99
+        request_body_size_bytes:
+          type: integer
+          example: 100
+        request_count:
+          type: integer
+          example: 1
+        request_id:
+          type: string
+          example: a1b2c3d4-e5f6-7890-1234-567890abcdef
+        response_body_size_bytes:
+          type: integer
+          example: 500
+        response_time_ms:
+          type: integer
+          example: 150
+        status_code:
+          type: integer
+          example: 200
+        tier_id:
+          type: integer
+          example: 1
+        tier_name:
+          type: string
+          example: Free
+        timestamp:
+          type: string
+          example: 2023-01-01T12:34:56Z
+        updated_at:
+          type: string
+          example: 2023-01-01T12:34:56Z
+        user_agent:
+          type: string
+          example: Mozilla/5.0
+        user_id:
+          type: string
+          example: a1b2c3d4-e5f6-7890-1234-567890abcdef
+    api_usage_viewmodels.APIUsageMetric:
+      type: object
+      properties:
+        api_key_name:
+          type: string
+          example: MyFirstKey
+        usage_metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/api_usage_viewmodels.APIUsage"
+    api_usage_viewmodels.AnyUserDailyApiUsageRequest:
+      type: object
+      required:
+        - end_date
+        - start_date
+      properties:
+        end_date:
+          type: string
+          example: 2023-01-31
+        start_date:
+          type: string
+          example: 2023-01-01
+        user_infos:
+          type: array
+          maxItems: 64
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/api_usage_viewmodels.UserInfo"
+    api_usage_viewmodels.AnyUserDailyApiUsageResponse:
+      type: object
+      properties:
+        users_usages:
+          description: A list of usage data, aggregated by user.
+          type: array
+          items:
+            $ref: "#/components/schemas/api_usage_viewmodels.UserUsage"
+    api_usage_viewmodels.UsageData:
+      type: object
+      properties:
+        api_key_name:
+          type: string
+          example: MyFirstKey
+        api_versions:
+          type: array
+          items:
+            type: string
+          example:
+            - '["v1"]'
+        authentication_methods:
+          type: array
+          items:
+            type: string
+          example:
+            - '["API_KEY"]'
+        date:
+          type: string
+          example: 2023-01-01T00:00:00Z
+        endpoints:
+          type: array
+          items:
+            type: string
+          example:
+            - '["/v1/data"]'
+        http_methods:
+          type: array
+          items:
+            type: string
+          example:
+            - '["GET"]'
+        max_response_time_ms:
+          type: integer
+          example: 500
+        min_response_time_ms:
+          type: integer
+          example: 10
+        tier_id:
+          type: integer
+          example: 1
+        tier_name:
+          type: string
+          example: Free
+        total_cache_hit_count:
+          type: integer
+          example: 100
+        total_data_transfer_in_bytes:
+          type: integer
+          example: 1024000
+        total_data_transfer_out_bytes:
+          type: integer
+          example: 2048000
+        total_error_count:
+          type: integer
+          example: 50
+        total_quota_exceeded_count:
+          type: integer
+          example: 2
+        total_rate_limited_count:
+          type: integer
+          example: 5
+        total_requests:
+          type: integer
+          example: 1000
+        total_response_time_ms:
+          type: integer
+          example: 50000
+        user_id:
+          type: string
+          example: a1b2c3d4-e5f6-7890-1234-567890abcdef
+        user_ips:
+          description: Added UserIPs
+          type: array
+          items:
+            type: string
+          example:
+            - '["192.168.1.1"]'
+    api_usage_viewmodels.UsagePerApiKeyName:
+      type: object
+      properties:
+        api_key_name:
+          type: string
+          example: MyFirstKey
+        usage_data:
+          type: array
+          items:
+            $ref: "#/components/schemas/api_usage_viewmodels.UsageData"
+    api_usage_viewmodels.UserAPIUsageRequest:
+      type: object
+      required:
+        - alias
+        - end_date
+        - start_date
+      properties:
+        alias:
+          type: string
+          maxLength: 64
+          minLength: 1
+          example: johndoe
+        api_key_names:
+          type: array
+          items:
+            type: string
+          example:
+            - '["MyFirstKey"'
+            - ' "AnotherKey"]'
+        end_date:
+          type: string
+          example: 2023-01-31
+        start_date:
+          type: string
+          example: 2023-01-01
+    api_usage_viewmodels.UserAPIUsageResponse:
+      type: object
+      properties:
+        alias:
+          type: string
+          example: johndoe
+        api_usage_metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/api_usage_viewmodels.APIUsageMetric"
+    api_usage_viewmodels.UserDailyApiUsageRequest:
+      type: object
+      required:
+        - end_date
+        - start_date
+      properties:
+        api_key_names:
+          type: array
+          items:
+            type: string
+          example:
+            - '["MyFirstKey"'
+            - ' "AnotherKey"]'
+        end_date:
+          type: string
+          example: 2023-01-31
+        start_date:
+          type: string
+          example: 2023-01-01
+    api_usage_viewmodels.UserDailyApiUsageResponse:
+      type: object
+      properties:
+        user_usages:
+          type: array
+          items:
+            $ref: "#/components/schemas/api_usage_viewmodels.UserUsagePerApiKeyName"
+    api_usage_viewmodels.UserInfo:
+      type: object
+      required:
+        - alias
+      properties:
+        alias:
+          type: string
+          maxLength: 64
+          minLength: 1
+          example: johndoe
+        api_key_names:
+          type: array
+          items:
+            type: string
+          example:
+            - '["MyFirstKey"'
+            - ' "AnotherKey"]'
+    api_usage_viewmodels.UserUsage:
+      type: object
+      properties:
+        alias:
+          type: string
+          example: johndoe
+        usages:
+          type: array
+          items:
+            $ref: "#/components/schemas/api_usage_viewmodels.UsagePerApiKeyName"
+    api_usage_viewmodels.UserUsageData:
+      type: object
+      properties:
+        api_key_name:
+          type: string
+          example: MyFirstKey
+        api_versions:
+          type: array
+          items:
+            type: string
+          example:
+            - '["v1"]'
+        authentication_methods:
+          type: array
+          items:
+            type: string
+          example:
+            - '["API_KEY"]'
+        date:
+          type: string
+          example: 2023-01-01
+        endpoints:
+          type: array
+          items:
+            type: string
+          example:
+            - '["/v1/data"]'
+        http_methods:
+          type: array
+          items:
+            type: string
+          example:
+            - '["GET"]'
+        tier_id:
+          type: integer
+          example: 1
+        tier_name:
+          type: string
+          example: Free
+        total_error_count:
+          type: integer
+          example: 50
+        total_requests:
+          type: integer
+          example: 1000
+    api_usage_viewmodels.UserUsagePerApiKeyName:
+      type: object
+      properties:
+        api_key_name:
+          type: string
+          example: MyFirstKey
+        usage_Data:
+          type: array
+          items:
+            $ref: "#/components/schemas/api_usage_viewmodels.UserUsageData"
+    auth_viewmodels.JWTResponse:
+      type: object
+      properties:
+        expires_at:
+          type: string
+          example: 2025-09-01T23:59:59Z
+        token:
+          type: string
+          example: eyJhbGci...
+    auth_viewmodels.LoginRequest:
+      type: object
+      required:
+        - alias
+        - wallet_address
+      properties:
+        alias:
+          type: string
+          maxLength: 32
+          minLength: 1
+          example: johndoe
+        wallet_address:
+          type: string
+          maxLength: 108
+          minLength: 103
+          example: addr1q...
+    auth_viewmodels.LoginResponse:
+      type: object
+      properties:
+        alias:
+          type: string
+          example: johndoe
+        jwt:
+          $ref: "#/components/schemas/auth_viewmodels.JWTResponse"
+        tier:
+          type: string
+          example: Free
+        user_id:
+          type: string
+          example: a1b2c3d4-e5f6-7890-1234-567890abcdef
+    auth_viewmodels.RegisterRequest:
+      type: object
+      required:
+        - alias
+        - email
+        - wallet_address
+      properties:
+        alias:
+          type: string
+          maxLength: 32
+          minLength: 1
+          example: johndoe
+        email:
+          type: string
+          maxLength: 254
+          minLength: 1
+          example: john.doe@example.com
+        wallet_address:
+          type: string
+          maxLength: 108
+          minLength: 103
+          example: addr1q...
+    auth_viewmodels.RegisterResponse:
+      type: object
+      properties:
+        alias:
+          type: string
+          example: johndoe
+        subscription_expiration:
+          type: string
+          example: 2026-08-31T23:59:59Z
+        tier:
+          type: string
+          example: Free
+        user_id:
+          type: string
+          example: a1b2c3d4-e5f6-7890-1234-567890abcdef
+    errors.BadRequestErrorResponse:
+      type: object
+      properties:
+        details:
+          type: string
+        message:
+          type: string
+          example: "Bad Request: Invalid input."
+        status_code:
+          type: integer
+          example: 400
+    errors.ConflictErrorResponse:
+      type: object
+      properties:
+        details:
+          type: string
+        message:
+          type: string
+          example: Conflict - The provided alias is already taken by another user. Please
+            choose a different alias.
+        status_code:
+          type: integer
+          example: 409
+    errors.ForbiddenErrorResponse:
+      type: object
+      properties:
+        details:
+          type: string
+        message:
+          type: string
+          example: "Forbidden: Insufficient permissions or tier access."
+        status_code:
+          type: integer
+          example: 403
+    errors.InternalServerErrorResponse:
+      type: object
+      properties:
+        details:
+          type: string
+        message:
+          type: string
+          example: "Internal Server Error: An unexpected error occurred."
+        status_code:
+          type: integer
+          example: 500
+    errors.NotFoundErrorResponse:
+      type: object
+      properties:
+        details:
+          type: string
+        message:
+          type: string
+          example: "Not Found: The requested resource could not be found."
+        status_code:
+          type: integer
+          example: 404
+    errors.TooManyRequestsErrorResponse:
+      type: object
+      properties:
+        details:
+          type: string
+        message:
+          type: string
+          example: "Too Many Requests: Rate limit or quota exceeded."
+        status_code:
+          type: integer
+          example: 429
+    errors.UnauthorizedErrorResponse:
+      type: object
+      properties:
+        details:
+          type: string
+        message:
+          type: string
+          example: "Unauthorized: Invalid or missing credentials."
+        status_code:
+          type: integer
+          example: 401
+    errors.UnprocessableEntityErrorResponse:
+      type: object
+      properties:
+        details:
+          type: string
+        message:
+          type: string
+          example: "Unprocessable Entity: Invalid request structure or data."
+        status_code:
+          type: integer
+          example: 422
+    merged_handlers.ContributorStatusResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/orchestration.ContributorStatus"
+        warning:
+          type: string
+    merged_handlers.ErrorResponse:
+      type: object
+      properties:
+        details:
+          type: string
+        error:
+          type: string
+    merged_handlers.MergedCourseDetailResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/orchestration.MergedCourseDetail"
+        warning:
+          type: string
+    merged_handlers.MergedCourseStatusResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/orchestration.MergedCourseStatus"
+        warning:
+          type: string
+    merged_handlers.MergedCoursesResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/orchestration.MergedCourseListItem"
+        warning:
+          type: string
+    merged_handlers.MergedProjectDetailResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/orchestration.MergedProjectDetail"
+        warning:
+          type: string
+    merged_handlers.MergedProjectsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/orchestration.MergedProjectListItem"
+        warning:
+          type: string
+    merged_handlers.StudentCourseStatusRequest:
+      type: object
+      properties:
+        alias:
+          type: string
+          example: student_alias
+        policy_id:
+          type: string
+          example: abc123def456
+    orchestration.ActiveCommitment:
+      type: object
+      properties:
+        reward:
+          type: integer
+        status:
+          type: string
+        task_id:
+          type: string
+        task_title:
+          type: string
+    orchestration.CommitmentStatus:
+      type: object
+      properties:
+        assignment_id:
+          type: string
+        evidence:
+          type: string
+        module_code:
+          type: string
+        status:
+          description: draft, submitted, approved, rejected
+          type: string
+        submitted_at:
+          type: string
+    orchestration.ContributorStatus:
+      type: object
+      properties:
+        active_commitments:
+          type: array
+          items:
+            $ref: "#/components/schemas/orchestration.ActiveCommitment"
+        alias:
+          type: string
+        completed_tasks:
+          type: integer
+        is_contributor:
+          description: From Andamioscan
+          type: boolean
+        pending_tasks:
+          type: integer
+        project_id:
+          type: string
+        total_commitments:
+          type: integer
+        total_earned:
+          type: integer
+    orchestration.CourseModule:
+      type: object
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+        module_id:
+          type: string
+        status:
+          description: DRAFT, PENDING_TX, ON_CHAIN
+          type: string
+        title:
+          type: string
+    orchestration.CourseOnChainDetail:
+      type: object
+      properties:
+        module_states:
+          type: array
+          items:
+            $ref: "#/components/schemas/orchestration.ModuleChainState"
+        status:
+          type: string
+        teachers:
+          type: array
+          items:
+            type: string
+        total_enrollments:
+          type: integer
+        total_modules:
+          type: integer
+    orchestration.CourseOnChainState:
+      type: object
+      properties:
+        status:
+          description: e.g., "active", "archived"
+          type: string
+        teachers:
+          type: array
+          items:
+            type: string
+        total_enrollments:
+          type: integer
+        total_modules:
+          type: integer
+    orchestration.MergedCourseDetail:
+      type: object
+      properties:
+        created_at:
+          type: string
+        description:
+          type: string
+        image_url:
+          type: string
+        modules:
+          type: array
+          items:
+            $ref: "#/components/schemas/orchestration.CourseModule"
+        on_chain:
+          description: From Andamioscan (on-chain state)
+          allOf:
+            - $ref: "#/components/schemas/orchestration.CourseOnChainDetail"
+        policy_id:
+          description: From DB API
+          type: string
+        title:
+          type: string
+        updated_at:
+          type: string
+    orchestration.MergedCourseListItem:
+      type: object
+      properties:
+        created_at:
+          type: string
+        description:
+          type: string
+        image_url:
+          type: string
+        on_chain:
+          description: From Andamioscan (on-chain state)
+          allOf:
+            - $ref: "#/components/schemas/orchestration.CourseOnChainState"
+        policy_id:
+          description: From DB API
+          type: string
+        title:
+          type: string
+        updated_at:
+          type: string
+    orchestration.MergedCourseStatus:
+      type: object
+      properties:
+        alias:
+          type: string
+        commitments:
+          description: From DB API (off-chain progress)
+          type: array
+          items:
+            $ref: "#/components/schemas/orchestration.CommitmentStatus"
+        on_chain_progress:
+          description: From Andamioscan (on-chain progress)
+          allOf:
+            - $ref: "#/components/schemas/orchestration.StudentOnChainProgress"
+        policy_id:
+          type: string
+    orchestration.MergedProjectDetail:
+      type: object
+      properties:
+        created_at:
+          type: string
+        description:
+          type: string
+        image_url:
+          type: string
+        on_chain:
+          description: From Andamioscan (on-chain state)
+          allOf:
+            - $ref: "#/components/schemas/orchestration.ProjectOnChainDetail"
+        project_id:
+          description: From DB API
+          type: string
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/orchestration.ProjectTask"
+        title:
+          type: string
+        updated_at:
+          type: string
+    orchestration.MergedProjectListItem:
+      type: object
+      properties:
+        created_at:
+          type: string
+        description:
+          type: string
+        image_url:
+          type: string
+        on_chain:
+          description: From Andamioscan (on-chain state)
+          allOf:
+            - $ref: "#/components/schemas/orchestration.ProjectOnChainState"
+        project_id:
+          description: From DB API
+          type: string
+        title:
+          type: string
+    orchestration.ModuleChainState:
+      type: object
+      properties:
+        completions:
+          type: integer
+        is_on_chain:
+          type: boolean
+        module_code:
+          type: string
+    orchestration.ProjectOnChainDetail:
+      type: object
+      properties:
+        completed_tasks:
+          type: integer
+        managers:
+          type: array
+          items:
+            type: string
+        open_tasks:
+          type: integer
+        status:
+          type: string
+        task_states:
+          type: array
+          items:
+            $ref: "#/components/schemas/orchestration.TaskChainState"
+        total_contributors:
+          type: integer
+        total_tasks:
+          type: integer
+    orchestration.ProjectOnChainState:
+      type: object
+      properties:
+        managers:
+          type: array
+          items:
+            type: string
+        open_tasks:
+          type: integer
+        status:
+          description: e.g., "active", "completed"
+          type: string
+        total_contributors:
+          type: integer
+        total_tasks:
+          type: integer
+    orchestration.ProjectTask:
+      type: object
+      properties:
+        description:
+          type: string
+        reward:
+          type: integer
+        status:
+          description: DRAFT, OPEN, IN_PROGRESS, COMPLETED
+          type: string
+        task_id:
+          type: string
+        title:
+          type: string
+    orchestration.StudentOnChainProgress:
+      type: object
+      properties:
+        completed_modules:
+          type: array
+          items:
+            type: string
+        has_credential:
+          type: boolean
         is_enrolled:
           type: boolean
-
-    UserGlobalState:
+        total_completed:
+          type: integer
+        total_required:
+          type: integer
+    orchestration.TaskChainState:
       type: object
+      properties:
+        commitments:
+          type: integer
+        is_on_chain:
+          type: boolean
+        status:
+          type: string
+        task_id:
+          type: string
+    user_viewmodels.DeleteUserRequest:
+      type: object
+      required:
+        - alias
       properties:
         alias:
           type: string
-        courses:
+          maxLength: 50
+          minLength: 3
+          example: johndoe
+    user_viewmodels.DeleteUserResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: User deleted successfully.
+    user_viewmodels.MeResponse:
+      type: object
+      properties:
+        active_keys:
           type: array
           items:
-            $ref: '#/components/schemas/UserCourse'
+            $ref: "#/components/schemas/api_key_viewmodels.APIKeyResponse"
+        alias:
+          type: string
+          example: johndoe
+        created_at:
+          type: string
+          example: 2025-08-31T23:59:59Z
+        tier:
+          type: string
+          example: Free
+        user_id:
+          type: string
+          example: a1b2c3d4-e5f6-7890-1234-567890abcdef
+    user_viewmodels.UsageResponse:
+      type: object
+      properties:
+        daily_quota_consumed:
+          type: integer
+          example: 50
+        daily_quota_limit:
+          type: integer
+          example: 1000
+        expiration:
+          type: string
+          example: 2026-08-31T23:59:59Z
+        monthly_quota_consumed:
+          type: integer
+          example: 500
+        monthly_quota_limit:
+          type: integer
+          example: 10000
+        rate_limit_windows:
+          type: array
+          items:
+            type: string
+          example:
+            - '["100 req/min"'
+            - ' "1000 req/day"'
+            - ' "10000 req/month"]'
+        remaining_daily:
+          type: integer
+          example: 950
+        remaining_monthly:
+          type: integer
+          example: 9500
+        subscription_tier:
+          type: string
+          example: Free

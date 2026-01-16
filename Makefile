@@ -9,11 +9,14 @@ TYPES_PKG := $(PACKAGES_DIR)/andamio-types
 DOCKER_IMAGE := openapitools/openapi-generator-cli:latest
 DOCKER_RUN := docker run --rm -v ${PWD}:/local $(DOCKER_IMAGE)
 
+# Gateway source of truth
+GATEWAY_SPEC_URL := https://andamio-api-gateway-168705267033.us-central1.run.app/api/v1/docs/doc.json
+
 # Colors for output
 GREEN := \033[0;32m
 NC := \033[0m # No Color
 
-.PHONY: all typescript go rust python clean validate help types types-build types-publish
+.PHONY: all typescript go rust python clean validate help types types-build types-publish fetch-spec
 
 # Default target - shows help
 help:
@@ -33,6 +36,19 @@ help:
 	@echo "  make types         - Generate TypeScript types (requires Node.js)"
 	@echo "  make types-build   - Generate and build the types package"
 	@echo "  make types-publish - Build and publish to npm (requires npm login)"
+	@echo ""
+	@echo "$(GREEN)Spec Management$(NC)"
+	@echo "  make fetch-spec    - Fetch latest spec from live gateway"
+
+# Fetch the latest OpenAPI spec from the live gateway and convert to OpenAPI 3.0
+fetch-spec:
+	@echo "$(GREEN)Fetching spec from gateway...$(NC)"
+	@curl -s $(GATEWAY_SPEC_URL) > swagger2.json
+	@echo "$(GREEN)Converting Swagger 2.0 to OpenAPI 3.0...$(NC)"
+	@npx swagger2openapi swagger2.json -o $(OPENAPI_FILE) --yaml
+	@rm swagger2.json
+	@echo "$(GREEN)✓ Spec saved to $(OPENAPI_FILE)$(NC)"
+	@echo "$(GREEN)Run 'git diff $(OPENAPI_FILE)' to review changes$(NC)"
 
 # Generate all SDKs
 all: typescript go rust python
