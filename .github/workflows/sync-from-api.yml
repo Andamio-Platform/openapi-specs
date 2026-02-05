@@ -77,10 +77,43 @@ jobs:
             exit 1
           fi
 
+      - name: Ensure info.version is set
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+
+          SPEC_PATH=$(cat /tmp/spec.path)
+
+          if [[ "$SPEC_PATH" == *.json ]]; then
+            jq '.info.version //= env.RELEASE_TAG' /tmp/spec.input > /tmp/spec.output
+          elif [[ "$SPEC_PATH" == *.yaml || "$SPEC_PATH" == *.yml ]]; then
+            python -m pip install --quiet pyyaml
+            python - <<'PY'
+import os
+import yaml
+
+with open("/tmp/spec.input", "r") as f:
+    data = yaml.safe_load(f)
+
+if data is None:
+    data = {}
+
+info = data.get("info") or {}
+info.setdefault("version", os.environ["RELEASE_TAG"])
+data["info"] = info
+
+with open("/tmp/spec.output", "w") as f:
+    yaml.safe_dump(data, f, sort_keys=False)
+PY
+          else
+            cp /tmp/spec.input /tmp/spec.output
+          fi
+
       - name: Update openapi.yaml
         run: |
           set -euo pipefail
-          cp /tmp/spec.input openapi.yaml
+          cp /tmp/spec.output openapi.yaml
 
       - name: Validate spec
         run: |
