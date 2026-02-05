@@ -6,19 +6,15 @@ on:
       source_repo:
         description: "Source repo in owner/name format"
         required: true
-        type: string
       release_tag:
         description: "Release tag to fetch spec from"
         required: true
-        type: string
       commit_sha:
         description: "Commit SHA in source repo"
         required: true
-        type: string
       triggered_by:
         description: "Actor who triggered the sync"
         required: true
-        type: string
 
 permissions:
   contents: write
