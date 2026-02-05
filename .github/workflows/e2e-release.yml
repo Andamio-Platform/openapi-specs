@@ -1,0 +1,132 @@
+name: E2E Docs Release
+
+on:
+  workflow_call:
+    inputs:
+      source_repo:
+        required: true
+        type: string
+      release_tag:
+        required: true
+        type: string
+      commit_sha:
+        required: true
+        type: string
+      triggered_by:
+        required: true
+        type: string
+      sync_workflow_file:
+        required: false
+        type: string
+        default: sync-from-api.yml
+      deploy_workflow_file:
+        required: false
+        type: string
+        default: deploy-docs.yml
+      sync_branch_prefix:
+        required: false
+        type: string
+        default: sync/
+      pr_title_match:
+        required: false
+        type: string
+        default: ""
+      docs_ref:
+        required: false
+        type: string
+        default: main
+      timeout_minutes:
+        required: false
+        type: number
+        default: 30
+      auto_merge:
+        required: false
+        type: boolean
+        default: true
+      merge_method:
+        required: false
+        type: string
+        default: merge
+      merge_admin:
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      E2E_PAT:
+        required: true
+  workflow_dispatch:
+    inputs:
+      source_repo:
+        required: true
+        type: string
+      release_tag:
+        required: true
+        type: string
+      commit_sha:
+        required: true
+        type: string
+      triggered_by:
+        required: true
+        type: string
+      sync_workflow_file:
+        required: false
+        type: string
+        default: sync-from-api.yml
+      deploy_workflow_file:
+        required: false
+        type: string
+        default: deploy-docs.yml
+      sync_branch_prefix:
+        required: false
+        type: string
+        default: sync/
+      pr_title_match:
+        required: false
+        type: string
+        default: ""
+      docs_ref:
+        required: false
+        type: string
+        default: main
+      timeout_minutes:
+        required: false
+        type: number
+        default: 30
+      auto_merge:
+        required: false
+        type: boolean
+        default: true
+      merge_method:
+        required: false
+        type: string
+        default: merge
+      merge_admin:
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run end-to-end validation
+        env:
+          E2E_PAT: ${{ secrets.E2E_PAT || secrets.GITHUB_TOKEN }}
+          SOURCE_REPO: ${{ inputs.source_repo || github.event.inputs.source_repo }}
+          RELEASE_TAG: ${{ inputs.release_tag || github.event.inputs.release_tag }}
+          COMMIT_SHA: ${{ inputs.commit_sha || github.event.inputs.commit_sha }}
+          TRIGGERED_BY: ${{ inputs.triggered_by || github.event.inputs.triggered_by }}
+          DOCS_REPO: ${{ github.repository }}
+          SYNC_WORKFLOW_FILE: ${{ inputs.sync_workflow_file || github.event.inputs.sync_workflow_file }}
+          DEPLOY_WORKFLOW_FILE: ${{ inputs.deploy_workflow_file || github.event.inputs.deploy_workflow_file }}
+          SYNC_BRANCH_PREFIX: ${{ inputs.sync_branch_prefix || github.event.inputs.sync_branch_prefix }}
+          PR_TITLE_MATCH: ${{ inputs.pr_title_match || github.event.inputs.pr_title_match }}
+          DOCS_REF: ${{ inputs.docs_ref || github.event.inputs.docs_ref }}
+          E2E_TIMEOUT_MINUTES: ${{ inputs.timeout_minutes || github.event.inputs.timeout_minutes }}
+          AUTO_MERGE: ${{ inputs.auto_merge || github.event.inputs.auto_merge }}
+          MERGE_METHOD: ${{ inputs.merge_method || github.event.inputs.merge_method }}
+          MERGE_ADMIN: ${{ inputs.merge_admin || github.event.inputs.merge_admin }}
+        run: tools/e2e/run-e2e.sh

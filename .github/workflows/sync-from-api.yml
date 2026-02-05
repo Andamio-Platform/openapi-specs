@@ -1,0 +1,121 @@
+name: Sync OpenAPI Spec From Main Repo
+
+on:
+  workflow_call:
+    inputs:
+      source_repo:
+        required: true
+        type: string
+      release_tag:
+        required: true
+        type: string
+      commit_sha:
+        required: true
+        type: string
+      triggered_by:
+        required: true
+        type: string
+    secrets:
+      SOURCE_REPO_READ_TOKEN:
+        required: true
+  workflow_dispatch:
+    inputs:
+      source_repo:
+        description: "Source repo in owner/name format"
+        required: true
+        type: string
+      release_tag:
+        description: "Release tag to fetch spec from"
+        required: true
+        type: string
+      commit_sha:
+        description: "Commit SHA in source repo"
+        required: true
+        type: string
+      triggered_by:
+        description: "Actor who triggered the sync"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download source spec (prefer JSON, fallback to YAML)
+        env:
+          SOURCE_REPO: ${{ inputs.source_repo }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          SOURCE_REPO_READ_TOKEN: ${{ secrets.SOURCE_REPO_READ_TOKEN }}
+          GH_TOKEN: ${{ secrets.SOURCE_REPO_READ_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          fetch_path() {
+            local path="$1"
+            if gh api "repos/${SOURCE_REPO}/contents/${path}?ref=${RELEASE_TAG}" --jq '.content' > /tmp/spec.b64 2>/tmp/gh.err; then
+              base64 -d /tmp/spec.b64 > /tmp/spec.input
+              echo "$path" > /tmp/spec.path
+              return 0
+            fi
+            return 1
+          }
+
+          if fetch_path "docs/swagger.json"; then
+            echo "Fetched docs/swagger.json"
+          elif fetch_path "docs/swagger.yaml"; then
+            echo "Fetched docs/swagger.yaml"
+          else
+            echo "Failed to fetch docs/swagger.json or docs/swagger.yaml from ${SOURCE_REPO}@${RELEASE_TAG}" >&2
+            cat /tmp/gh.err >&2 || true
+            exit 1
+          fi
+
+      - name: Update openapi.yaml
+        run: |
+          set -euo pipefail
+          cp /tmp/spec.input openapi.yaml
+
+      - name: Validate spec
+        run: |
+          set -euo pipefail
+          make validate
+
+      - name: Create pull request
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          COMMIT_SHA: ${{ inputs.commit_sha }}
+          TRIGGERED_BY: ${{ inputs.triggered_by }}
+          SOURCE_REPO: ${{ inputs.source_repo }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet; then
+            echo "No changes to openapi.yaml; exiting."
+            exit 0
+          fi
+
+          BRANCH="sync/${RELEASE_TAG}"
+          git checkout -b "$BRANCH"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add openapi.yaml
+          git commit -m "chore: sync OpenAPI spec from ${RELEASE_TAG}"
+          git push origin "$BRANCH"
+
+          SPEC_PATH=$(cat /tmp/spec.path)
+
+          gh pr create \
+            --title "Sync OpenAPI spec from ${RELEASE_TAG}" \
+            --body "Source repo: ${SOURCE_REPO}\nRelease tag: ${RELEASE_TAG}\nCommit SHA: ${COMMIT_SHA}\nTriggered by: ${TRIGGERED_BY}\nSource spec: ${SPEC_PATH}" \
+            --base main \
+            --head "$BRANCH"
