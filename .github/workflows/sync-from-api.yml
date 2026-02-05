@@ -1,23 +1,6 @@
 name: Sync OpenAPI Spec From Main Repo
 
 on:
-  workflow_call:
-    inputs:
-      source_repo:
-        required: true
-        type: string
-      release_tag:
-        required: true
-        type: string
-      commit_sha:
-        required: true
-        type: string
-      triggered_by:
-        required: true
-        type: string
-    secrets:
-      SOURCE_REPO_READ_TOKEN:
-        required: true
   workflow_dispatch:
     inputs:
       source_repo:
